@@ -8,16 +8,58 @@
 import SwiftUI
 
 struct ContentView: View {
+
+    @State private var items: [FoodItem] = sampleItems
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        NavigationView {
+            Group {
+                if items.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "refrigerator")
+                            .font(.system(size: 60))
+                            .foregroundColor(.secondary)
+                        Text("No food added yet.")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                        Text("Tap + to add your first item.")
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    List(items) { item in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(item.name)
+                                .font(.headline)
+                            Text("\(item.amount)  ·  \(item.storagePlace)")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+            }
+            .navigationTitle("FridgeLog")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        // Coming in B-002
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.title3)
+                    }
+                }
+            }
         }
-        .padding()
     }
 }
+
+// MARK: - Placeholder Data
+let sampleItems: [FoodItem] = [
+    FoodItem(name: "Milk",        amount: "1 carton",  storagePlace: "Fridge"),
+    FoodItem(name: "Eggs",        amount: "12",        storagePlace: "Fridge"),
+    FoodItem(name: "Frozen Peas", amount: "1 bag",     storagePlace: "Freezer"),
+    FoodItem(name: "Rice",        amount: "2 lbs",     storagePlace: "Pantry"),
+]
 
 #Preview {
     ContentView()

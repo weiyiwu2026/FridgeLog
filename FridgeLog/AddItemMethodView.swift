@@ -3,6 +3,9 @@ import SwiftUI
 struct AddItemMethodView: View {
     @Environment(\.dismiss) private var dismiss
 
+    // Passed in from ContentView — called when a new item is saved
+    let onItemSaved: (FoodItem) -> Void
+
     var body: some View {
         NavigationView {
             VStack(spacing: 16) {
@@ -34,7 +37,9 @@ struct AddItemMethodView: View {
                     icon: "square.and.pencil",
                     label: "Manual Entry",
                     description: "Type the item details by hand",
-                    destination: PlaceholderView(title: "Manual Entry")
+                    destination: ManualEntryView(onSave: { item in
+                        onItemSaved(item)
+                    })
                 )
                 Spacer()
             }
@@ -88,5 +93,5 @@ struct AddMethodButton<Destination: View>: View {
 }
 
 #Preview {
-    AddItemMethodView()
+    AddItemMethodView(onItemSaved: { _ in })
 }

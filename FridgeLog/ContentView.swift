@@ -83,7 +83,21 @@ struct ContentView: View {
                 }
             }
             .sheet(isPresented: $showAddItem) {
-                AddItemMethodView()
+                AddItemMethodView(onItemSaved: { newItem in
+                    // Merge into an existing entry only when name, storage place,
+                    // item type, AND expiration date all match.
+                    if let index = items.firstIndex(where: {
+                        $0.name.lowercased() == newItem.name.lowercased() &&
+                        $0.storagePlace       == newItem.storagePlace &&
+                        $0.itemType           == newItem.itemType &&
+                        $0.expirationDate     == newItem.expirationDate
+                    }) {
+                        items[index].quantity += newItem.quantity
+                    } else {
+                        items.append(newItem)
+                    }
+                    showAddItem = false
+                })
             }
         }
     }
@@ -93,12 +107,34 @@ struct ContentView: View {
 struct ItemRow: View {
     let item: FoodItem
 
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .none
+        return f
+    }()
+
+    private var expirationText: String {
+        if let date = item.expirationDate {
+            return "Expires: \(Self.dateFormatter.string(from: date))"
+        } else {
+            return "No expiration date"
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(item.name)
                 .font(.headline)
-            Text(item.amount)
-                .font(.subheadline)
+            HStack(spacing: 8) {
+                Text("Qty: \(item.quantity)")
+                Text("·")
+                Text(item.itemType)
+            }
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+            Text(expirationText)
+                .font(.caption)
                 .foregroundColor(.secondary)
         }
         .padding(.vertical, 4)
@@ -107,10 +143,10 @@ struct ItemRow: View {
 
 // MARK: - Placeholder Data
 let sampleItems: [FoodItem] = [
-    FoodItem(name: "Milk",        amount: "1 carton",  storagePlace: "Fridge"),
-    FoodItem(name: "Eggs",        amount: "12",        storagePlace: "Fridge"),
-    FoodItem(name: "Frozen Peas", amount: "1 bag",     storagePlace: "Freezer"),
-    FoodItem(name: "Rice",        amount: "2 lbs",     storagePlace: "Pantry"),
+    FoodItem(name: "Milk",        quantity: 1,  storagePlace: "Fridge",  itemType: "Dairy",    purchaseDate: Date(), estimatedShelfLifeDays: 7,   expirationDate: Calendar.current.date(byAdding: .day, value: 5, to: Date())),
+    FoodItem(name: "Eggs",        quantity: 12, storagePlace: "Fridge",  itemType: "Produce",  purchaseDate: Date(), estimatedShelfLifeDays: 21,  expirationDate: Calendar.current.date(byAdding: .day, value: 14, to: Date())),
+    FoodItem(name: "Frozen Peas", quantity: 1,  storagePlace: "Freezer", itemType: "Frozen",   purchaseDate: Date(), estimatedShelfLifeDays: 90,  expirationDate: nil),
+    FoodItem(name: "Rice",        quantity: 2,  storagePlace: "Pantry",  itemType: "Packaged", purchaseDate: Date(), estimatedShelfLifeDays: 365, expirationDate: nil),
 ]
 
 #Preview {

@@ -2,25 +2,44 @@ import SwiftUI
 
 struct ManualEntryView: View {
 
-    // Called when the user taps Save with a valid item
     let onSave: (FoodItem) -> Void
 
+    @Environment(FoodNameStore.self) private var foodNameStore
     @Environment(\.dismiss) private var dismiss
 
-    // Form fields
-    @State private var name                = ""
-    @State private var quantity            = 1
-    @State private var storagePlace        = "Fridge"
-    @State private var itemType            = "Other"
-    @State private var purchaseDate        = Date()
-    @State private var shelfLifeDays       = 7
-    @State private var hasExpirationDate   = false
-    @State private var expirationDate      = Date()
+    @State private var name               = ""
+    @State private var amountType         = AmountType.quantity
+    @State private var amountValue        = 1
+    @State private var storagePlace       = "Fridge"
+    @State private var itemType           = ""      // empty = not yet chosen
+    @State private var purchaseDate       = Date()
+    @State private var shelfLifeDays      = 7
+    @State private var hasExpirationDate  = false
+    @State private var expirationDate     = Date()
 
-    @State private var showNameError       = false
+    @State private var showNameError      = false
+    @State private var showItemTypeError  = false
+    @State private var showReview         = false
+    @State private var reviewItem         = FoodItem(
+        name: "", amountType: .quantity, amountValue: 1,
+        storagePlace: "Fridge", itemType: "Other",
+        purchaseDate: Date(), estimatedShelfLifeDays: 7, expirationDate: nil
+    )
 
     let storagePlaces = ["Fridge", "Freezer", "Pantry"]
     let itemTypes     = ["Produce", "Meat", "Dairy", "Packaged", "Frozen", "Pantry", "Other"]
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespaces)
+    }
+
+    private var isKnownItem: Bool {
+        foodNameStore.defaultItemType(for: trimmedName) != nil
+    }
+
+    private var showNewItemHint: Bool {
+        !trimmedName.isEmpty && !isKnownItem && foodNameStore.suggestions(for: trimmedName).isEmpty
+    }
 
     var body: some View {
         Form {
@@ -30,8 +49,16 @@ struct ManualEntryView: View {
                 TextField("Item name (e.g. Milk)", text: $name)
                     .autocorrectionDisabled()
                     .onChange(of: name) { _ in
-                        if !name.trimmingCharacters(in: .whitespaces).isEmpty {
-                            showNameError = false
+                        let trimmed = name.trimmingCharacters(in: .whitespaces)
+                        if !trimmed.isEmpty { showNameError = false }
+
+                        if let defaultType = foodNameStore.defaultItemType(for: trimmed) {
+                            // Known item — auto-fill type
+                            itemType = defaultType
+                            showItemTypeError = false
+                        } else {
+                            // Unknown item — clear type so user must choose
+                            itemType = ""
                         }
                     }
 
@@ -41,81 +68,118 @@ struct ManualEntryView: View {
                         .font(.caption)
                 }
 
-                Picker("Item Type", selection: $itemType) {
-                    ForEach(itemTypes, id: \.self) { type in
-                        Text(type).tag(type)
+                // Autocomplete suggestions (optional — user can ignore these)
+                ForEach(foodNameStore.suggestions(for: name), id: \.name) { entry in
+                    Button(action: {
+                        name = entry.name
+                        itemType = entry.itemType
+                        showItemTypeError = false
+                    }) {
+                        Label(entry.name, systemImage: "magnifyingglass")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
                     }
+                }
+
+                // New item hint — shown only when name is typed but not in standard list
+                if showNewItemHint {
+                    Text("\"\(trimmedName)\" is a new item. Please choose an item type below.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                // Item type picker
+                Picker("Item Type", selection: $itemType) {
+                    if itemType.isEmpty {
+                        Text("Select type...").tag("")
+                    }
+                    ForEach(itemTypes, id: \.self) { Text($0).tag($0) }
+                }
+                .onChange(of: itemType) { _ in
+                    showItemTypeError = false
+                }
+
+                if showItemTypeError {
+                    Text("Please select an item type.")
+                        .foregroundColor(.red)
+                        .font(.caption)
                 }
 
                 Picker("Storage Place", selection: $storagePlace) {
-                    ForEach(storagePlaces, id: \.self) { place in
-                        Text(place).tag(place)
-                    }
+                    ForEach(storagePlaces, id: \.self) { Text($0).tag($0) }
                 }
             }
 
-            // ── Quantity ──────────────────────────────────────
-            Section(header: Text("Quantity")) {
-                Stepper("Quantity: \(quantity)", value: $quantity, in: 1...99)
+            // ── Amount ────────────────────────────────────────
+            Section(header: Text("Amount")) {
+                Picker("Amount Type", selection: $amountType) {
+                    ForEach(AmountType.allCases, id: \.self) { type in
+                        Text(type.rawValue).tag(type)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Stepper("\(amountType.rawValue): \(amountValue)", value: $amountValue, in: 1...99)
             }
 
             // ── Dates ─────────────────────────────────────────
             Section(header: Text("Dates")) {
-                DatePicker(
-                    "Purchase Date",
-                    selection: $purchaseDate,
-                    displayedComponents: .date
-                )
+                DatePicker("Purchase Date", selection: $purchaseDate, displayedComponents: .date)
 
                 Stepper(
                     "Shelf Life: \(shelfLifeDays) day\(shelfLifeDays == 1 ? "" : "s")",
-                    value: $shelfLifeDays,
-                    in: 1...365
+                    value: $shelfLifeDays, in: 1...365
                 )
 
                 Toggle("Enter Exact Expiration Date", isOn: $hasExpirationDate)
 
                 if hasExpirationDate {
-                    DatePicker(
-                        "Expiration Date",
-                        selection: $expirationDate,
-                        in: Date()...,
-                        displayedComponents: .date
-                    )
+                    DatePicker("Expiration Date", selection: $expirationDate,
+                               in: Date()..., displayedComponents: .date)
                 }
             }
         }
+        .background(
+            NavigationLink(
+                destination: ItemReviewView(item: reviewItem, onSave: { savedItem in
+                    onSave(savedItem)
+                }),
+                isActive: $showReview
+            ) { EmptyView() }
+        )
         .navigationTitle("Manual Entry")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Save") {
-                    saveItem()
-                }
-                .fontWeight(.semibold)
+                Button("Next") { goToReview() }
+                    .fontWeight(.semibold)
             }
         }
     }
 
-    // ── Save Logic ────────────────────────────────────────────
-    private func saveItem() {
+    private func goToReview() {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
             showNameError = true
             return
         }
-
-        let newItem = FoodItem(
+        guard !itemType.isEmpty else {
+            showItemTypeError = true
+            return
+        }
+        showNameError = false
+        showItemTypeError = false
+        reviewItem = FoodItem(
             name: trimmed,
-            quantity: quantity,
+            amountType: amountType,
+            amountValue: amountValue,
             storagePlace: storagePlace,
             itemType: itemType,
             purchaseDate: purchaseDate,
             estimatedShelfLifeDays: shelfLifeDays,
             expirationDate: hasExpirationDate ? expirationDate : nil
         )
-
-        onSave(newItem)   // adds item to the list and closes the sheet
+        showReview = true
     }
 }
 

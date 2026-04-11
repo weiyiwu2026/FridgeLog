@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct FridgeLogApp: App {
+    @State private var foodNameStore = FoodNameStore()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(foodNameStore)
         }
     }
 }

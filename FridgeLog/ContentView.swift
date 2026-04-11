@@ -12,6 +12,14 @@ struct ContentView: View {
     @State private var items: [FoodItem] = sampleItems
     @State private var showAddItem = false
 
+    @State private var fridgeExpanded  = true
+    @State private var freezerExpanded = true
+    @State private var pantryExpanded  = true
+
+    var fridgeItems:  [FoodItem] { items.filter { $0.storagePlace == "Fridge"  } }
+    var freezerItems: [FoodItem] { items.filter { $0.storagePlace == "Freezer" } }
+    var pantryItems:  [FoodItem] { items.filter { $0.storagePlace == "Pantry"  } }
+
     var body: some View {
         NavigationView {
             Group {
@@ -27,15 +35,39 @@ struct ContentView: View {
                             .foregroundColor(.secondary)
                     }
                 } else {
-                    List(items) { item in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(item.name)
-                                .font(.headline)
-                            Text("\(item.amount)  ·  \(item.storagePlace)")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                    List {
+                        if !fridgeItems.isEmpty {
+                            DisclosureGroup(isExpanded: $fridgeExpanded) {
+                                ForEach(fridgeItems) { item in
+                                    ItemRow(item: item)
+                                }
+                            } label: {
+                                Label("Fridge", systemImage: "refrigerator")
+                                    .font(.headline)
+                            }
                         }
-                        .padding(.vertical, 4)
+
+                        if !freezerItems.isEmpty {
+                            DisclosureGroup(isExpanded: $freezerExpanded) {
+                                ForEach(freezerItems) { item in
+                                    ItemRow(item: item)
+                                }
+                            } label: {
+                                Label("Freezer", systemImage: "snowflake")
+                                    .font(.headline)
+                            }
+                        }
+
+                        if !pantryItems.isEmpty {
+                            DisclosureGroup(isExpanded: $pantryExpanded) {
+                                ForEach(pantryItems) { item in
+                                    ItemRow(item: item)
+                                }
+                            } label: {
+                                Label("Pantry", systemImage: "archivebox")
+                                    .font(.headline)
+                            }
+                        }
                     }
                 }
             }
@@ -54,6 +86,22 @@ struct ContentView: View {
                 AddItemMethodView()
             }
         }
+    }
+}
+
+// MARK: - Item Row
+struct ItemRow: View {
+    let item: FoodItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(item.name)
+                .font(.headline)
+            Text(item.amount)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 4)
     }
 }
 

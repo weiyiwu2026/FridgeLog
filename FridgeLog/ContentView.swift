@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
 
     @State private var items: [FoodItem] = sampleItems
+    @State private var showAddItem = false
 
     var body: some View {
         NavigationView {
@@ -42,12 +43,15 @@ struct ContentView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        // Coming in B-002
+                        showAddItem = true
                     }) {
                         Image(systemName: "plus")
                             .font(.title3)
                     }
                 }
+            }
+            .sheet(isPresented: $showAddItem) {
+                AddItemMethodView()
             }
         }
     }

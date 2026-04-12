@@ -6,163 +6,150 @@ struct HomeView: View {
     @State private var items: [FoodItem] = sampleItems
     @State private var showAddItem = false
 
-    @State private var fridgeExpanded  = true
-    @State private var freezerExpanded = true
-    @State private var pantryExpanded  = true
-
-    var fridgeItems:  [FoodItem] { items.filter { $0.storagePlace == "Fridge"  } }
-    var freezerItems: [FoodItem] { items.filter { $0.storagePlace == "Freezer" } }
-    var pantryItems:  [FoodItem] { items.filter { $0.storagePlace == "Pantry"  } }
+    // Number of items expiring within the next 7 days — used as a live badge
+    private var expiringSoonCount: Int {
+        let cutoff = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+        return items.filter { $0.expirationDate <= cutoff }.count
+    }
 
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 16) {
-                    if items.isEmpty {
-                        VStack(spacing: 16) {
-                            Image(systemName: "refrigerator")
-                                .font(.system(size: 60))
-                                .foregroundColor(.secondary)
-                            Text("No food added yet.")
-                                .font(.title3)
-                                .foregroundColor(.secondary)
-                            Text("Tap + to add your first item.")
-                                .foregroundColor(.secondary)
+                VStack(spacing: 24) {
+
+                    // ── 2 × 2 Dashboard Grid ──────────────────────
+                    LazyVGrid(
+                        columns: [GridItem(.flexible()), GridItem(.flexible())],
+                        spacing: 16
+                    ) {
+                        // Card 1 – Current Food List (navigates to real inventory)
+                        NavigationLink(destination:
+                            FoodListView(items: $items, onItemSaved: saveItem)
+                        ) {
+                            DashboardCard(
+                                title: "Current Food List",
+                                icon: "refrigerator",
+                                badge: "\(items.count) item\(items.count == 1 ? "" : "s")"
+                            )
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 60)
-                    } else {
-                        if !fridgeItems.isEmpty {
-                            StorageSection(title: "Fridge", icon: "refrigerator",
-                                           isExpanded: $fridgeExpanded, items: fridgeItems)
+                        .buttonStyle(.plain)
+
+                        // Card 2 – Expiring Soon (placeholder for now)
+                        NavigationLink(destination:
+                            PlaceholderView(title: "Expiring Soon")
+                        ) {
+                            DashboardCard(
+                                title: "Expiring Soon",
+                                icon: "clock",
+                                badge: expiringSoonCount > 0
+                                    ? "\(expiringSoonCount) item\(expiringSoonCount == 1 ? "" : "s")"
+                                    : "All good"
+                            )
                         }
-                        if !freezerItems.isEmpty {
-                            StorageSection(title: "Freezer", icon: "snowflake",
-                                           isExpanded: $freezerExpanded, items: freezerItems)
+                        .buttonStyle(.plain)
+
+                        // Card 3 – To Buy List (placeholder for now)
+                        NavigationLink(destination:
+                            PlaceholderView(title: "To Buy List")
+                        ) {
+                            DashboardCard(
+                                title: "To Buy List",
+                                icon: "cart",
+                                badge: "Coming soon"
+                            )
                         }
-                        if !pantryItems.isEmpty {
-                            StorageSection(title: "Pantry", icon: "archivebox",
-                                           isExpanded: $pantryExpanded, items: pantryItems)
+                        .buttonStyle(.plain)
+
+                        // Card 4 – What to Eat Today (placeholder for now)
+                        NavigationLink(destination:
+                            PlaceholderView(title: "What to Eat Today")
+                        ) {
+                            DashboardCard(
+                                title: "What to Eat Today",
+                                icon: "fork.knife",
+                                badge: "Coming soon"
+                            )
                         }
+                        .buttonStyle(.plain)
+                    }
+
+                    // ── Add Item Button ───────────────────────────
+                    Button(action: { showAddItem = true }) {
+                        Label("Add Item", systemImage: "plus")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.accentColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(14)
                     }
                 }
                 .padding()
             }
             .navigationTitle("FridgeLog")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showAddItem = true
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.title3)
-                    }
-                }
-            }
             .sheet(isPresented: $showAddItem) {
                 AddItemMethodView(onItemSaved: { newItem in
-                    foodNameStore.add(name: newItem.name, itemType: newItem.itemType,
-                                      storagePlace: newItem.storagePlace,
-                                      shelfLifeDays: newItem.estimatedShelfLifeDays)
-
-                    if let index = items.firstIndex(where: {
-                        $0.name.lowercased() == newItem.name.lowercased() &&
-                        $0.storagePlace      == newItem.storagePlace &&
-                        $0.itemType          == newItem.itemType &&
-                        $0.amountType        == newItem.amountType &&
-                        Calendar.current.isDate($0.expirationDate, inSameDayAs: newItem.expirationDate)
-                    }) {
-                        items[index].amountValue += newItem.amountValue
-                    } else {
-                        items.append(newItem)
-                    }
+                    saveItem(newItem)
                     showAddItem = false
                 })
             }
         }
     }
+
+    // MARK: - Save Logic (shared by dashboard Add Item and FoodListView)
+
+    func saveItem(_ newItem: FoodItem) {
+        foodNameStore.add(
+            name: newItem.name,
+            itemType: newItem.itemType,
+            storagePlace: newItem.storagePlace,
+            shelfLifeDays: newItem.estimatedShelfLifeDays
+        )
+        if let index = items.firstIndex(where: {
+            $0.name.lowercased() == newItem.name.lowercased() &&
+            $0.storagePlace      == newItem.storagePlace &&
+            $0.itemType          == newItem.itemType &&
+            $0.amountType        == newItem.amountType &&
+            Calendar.current.isDate($0.expirationDate, inSameDayAs: newItem.expirationDate)
+        }) {
+            items[index].amountValue += newItem.amountValue
+        } else {
+            items.append(newItem)
+        }
+    }
 }
 
-// MARK: - Collapsible Storage Section
-struct StorageSection: View {
+// MARK: - Dashboard Card
+
+struct DashboardCard: View {
     let title: String
     let icon: String
-    @Binding var isExpanded: Bool
-    let items: [FoodItem]
+    let badge: String
 
     var body: some View {
-        VStack(spacing: 0) {
-            Button(action: {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isExpanded.toggle()
-                }
-            }) {
-                HStack {
-                    Label(title, systemImage: icon)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                        .foregroundColor(.secondary)
-                        .animation(.easeInOut(duration: 0.2), value: isExpanded)
-                }
-                .padding()
-            }
-
-            if isExpanded {
-                Divider()
-                ForEach(items) { item in
-                    ItemRow(item: item)
-                        .padding(.horizontal)
-                    if item.id != items.last?.id {
-                        Divider()
-                            .padding(.leading)
-                    }
-                }
-                .padding(.bottom, 8)
-            }
+        VStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 32))
+                .foregroundColor(.accentColor)
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+                .multilineTextAlignment(.center)
+            Text(badge)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
         }
+        .frame(maxWidth: .infinity, minHeight: 130)
+        .padding()
         .background(Color(.secondarySystemBackground))
-        .cornerRadius(12)
-    }
-}
-
-// MARK: - Item Row
-struct ItemRow: View {
-    let item: FoodItem
-
-    private static let dateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .none
-        return f
-    }()
-
-    private var expirationText: String {
-        "Exp: \(Self.dateFormatter.string(from: item.expirationDate))"
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(item.name)
-                .font(.headline)
-            HStack(spacing: 8) {
-                Text(item.amountType == .portions ? "Prt: \(item.amountValue)" : "Qty: \(item.amountValue)")
-                Text("·")
-                Text(item.itemType)
-                Text("·")
-                Text(expirationText)
-            }
-            .font(.subheadline)
-            .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 4)
+        .cornerRadius(16)
     }
 }
 
 // MARK: - Sample Data
+
 private func sampleExpiry(_ days: Int) -> Date {
     Calendar.current.date(byAdding: .day, value: days, to: Date()) ?? Date()
 }

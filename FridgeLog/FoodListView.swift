@@ -1,11 +1,11 @@
 import SwiftUI
 
-struct FoodListView: View {
+struct CurrentFoodListView: View {
 
     @Binding var items: [FoodItem]
     let onItemSaved: (FoodItem) -> Void
 
-    @State private var showAddItem    = false
+    @State private var showAddItem     = false
     @State private var fridgeExpanded  = true
     @State private var freezerExpanded = true
     @State private var pantryExpanded  = true
@@ -148,7 +148,7 @@ struct ItemRow: View {
 
 #Preview {
     NavigationView {
-        FoodListView(items: .constant(sampleItems), onItemSaved: { _ in })
+        CurrentFoodListView(items: .constant(sampleItems), onItemSaved: { _ in })
     }
     .environment(FoodNameStore())
 }

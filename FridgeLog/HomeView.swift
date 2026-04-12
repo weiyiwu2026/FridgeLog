@@ -24,7 +24,7 @@ struct HomeView: View {
                     ) {
                         // Card 1 – Current Food List (navigates to real inventory)
                         NavigationLink(destination:
-                            FoodListView(items: $items, onItemSaved: saveItem)
+                            CurrentFoodListView(items: $items, onItemSaved: saveItem)
                         ) {
                             DashboardCard(
                                 title: "Current Food List",

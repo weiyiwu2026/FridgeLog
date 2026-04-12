@@ -27,7 +27,7 @@ struct ManualEntryView: View {
     )
 
     let storagePlaces = ["Fridge", "Freezer", "Pantry"]
-    let itemTypes     = ["Produce", "Meat", "Dairy", "Packaged", "Frozen", "Pantry", "Other"]
+    let itemTypes     = ["Produce", "Dairy & Eggs", "Meat & Seafood", "Frozen", "Pantry", "Snacks", "Beverages", "Bakery", "Deli & Prepared", "Other"]
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespaces)

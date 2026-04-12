@@ -68,8 +68,10 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showAddItem) {
                 AddItemMethodView(onItemSaved: { newItem in
-                    // Save name + type to the standard list (ignored if name already exists)
-                    foodNameStore.add(name: newItem.name, itemType: newItem.itemType)
+                    // Save to custom list (ignored if name already exists in built-ins or customs)
+                    foodNameStore.add(name: newItem.name, itemType: newItem.itemType,
+                                      storagePlace: newItem.storagePlace,
+                                      shelfLifeDays: newItem.estimatedShelfLifeDays)
 
                     // Merge into an existing entry only when name, storage place,
                     // item type, amount type, AND expiration date all match.
@@ -78,7 +80,7 @@ struct ContentView: View {
                         $0.storagePlace      == newItem.storagePlace &&
                         $0.itemType          == newItem.itemType &&
                         $0.amountType        == newItem.amountType &&
-                        $0.expirationDate    == newItem.expirationDate
+                        Calendar.current.isDate($0.expirationDate, inSameDayAs: newItem.expirationDate)
                     }) {
                         items[index].amountValue += newItem.amountValue
                     } else {
@@ -150,11 +152,7 @@ struct ItemRow: View {
     }()
 
     private var expirationText: String {
-        if let date = item.expirationDate {
-            return "Expires: \(Self.dateFormatter.string(from: date))"
-        } else {
-            return "No expiration date"
-        }
+        "Exp: \(Self.dateFormatter.string(from: item.expirationDate))"
     }
 
     var body: some View {
@@ -162,7 +160,7 @@ struct ItemRow: View {
             Text(item.name)
                 .font(.headline)
             HStack(spacing: 8) {
-                Text(item.amountType == .portions ? "Portions: \(item.amountValue)" : "Qty: \(item.amountValue)")
+                Text(item.amountType == .portions ? "Prt: \(item.amountValue)" : "Qty: \(item.amountValue)")
                 Text("·")
                 Text(item.itemType)
                 Text("·")
@@ -177,12 +175,16 @@ struct ItemRow: View {
 }
 
 // MARK: - Placeholder Data
+private func sampleExpiry(_ days: Int) -> Date {
+    Calendar.current.date(byAdding: .day, value: days, to: Date()) ?? Date()
+}
+
 let sampleItems: [FoodItem] = [
-    FoodItem(name: "Milk",        amountType: .quantity, amountValue: 1,  storagePlace: "Fridge",  itemType: "Dairy & Eggs",    purchaseDate: Date(), estimatedShelfLifeDays: 7,   expirationDate: Calendar.current.date(byAdding: .day, value: 5,  to: Date())),
-    FoodItem(name: "Eggs",        amountType: .quantity, amountValue: 12, storagePlace: "Fridge",  itemType: "Dairy & Eggs",    purchaseDate: Date(), estimatedShelfLifeDays: 21,  expirationDate: Calendar.current.date(byAdding: .day, value: 14, to: Date())),
-    FoodItem(name: "Frozen Peas", amountType: .quantity, amountValue: 1,  storagePlace: "Freezer", itemType: "Frozen",          purchaseDate: Date(), estimatedShelfLifeDays: 90,  expirationDate: nil),
-    FoodItem(name: "Ground Beef", amountType: .portions, amountValue: 4,  storagePlace: "Freezer", itemType: "Meat & Seafood",  purchaseDate: Date(), estimatedShelfLifeDays: 120, expirationDate: nil),
-    FoodItem(name: "Rice",        amountType: .quantity, amountValue: 2,  storagePlace: "Pantry",  itemType: "Pantry",          purchaseDate: Date(), estimatedShelfLifeDays: 365, expirationDate: nil),
+    FoodItem(name: "Milk",        amountType: .quantity, amountValue: 1,  storagePlace: "Fridge",  itemType: "Dairy & Eggs",   purchaseDate: Date(), estimatedShelfLifeDays: 7,   expirationDate: sampleExpiry(7)),
+    FoodItem(name: "Eggs",        amountType: .quantity, amountValue: 12, storagePlace: "Fridge",  itemType: "Dairy & Eggs",   purchaseDate: Date(), estimatedShelfLifeDays: 21,  expirationDate: sampleExpiry(21)),
+    FoodItem(name: "Frozen Peas", amountType: .quantity, amountValue: 1,  storagePlace: "Freezer", itemType: "Frozen",         purchaseDate: Date(), estimatedShelfLifeDays: 90,  expirationDate: sampleExpiry(90)),
+    FoodItem(name: "Ground Beef", amountType: .portions, amountValue: 4,  storagePlace: "Freezer", itemType: "Meat & Seafood", purchaseDate: Date(), estimatedShelfLifeDays: 120, expirationDate: sampleExpiry(120)),
+    FoodItem(name: "Rice",        amountType: .quantity, amountValue: 2,  storagePlace: "Pantry",  itemType: "Pantry",         purchaseDate: Date(), estimatedShelfLifeDays: 365, expirationDate: sampleExpiry(365)),
 ]
 
 #Preview {

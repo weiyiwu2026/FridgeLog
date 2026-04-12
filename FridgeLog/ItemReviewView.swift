@@ -33,12 +33,8 @@ struct ItemReviewView: View {
                           value: Self.dateFormatter.string(from: item.purchaseDate))
                 ReviewRow(label: "Shelf Life",
                           value: "\(item.estimatedShelfLifeDays) day\(item.estimatedShelfLifeDays == 1 ? "" : "s")")
-                if let expDate = item.expirationDate {
-                    ReviewRow(label: "Expiration Date",
-                              value: Self.dateFormatter.string(from: expDate))
-                } else {
-                    ReviewRow(label: "Expiration Date", value: "Not set")
-                }
+                ReviewRow(label: "Expiration Date",
+                          value: Self.dateFormatter.string(from: item.expirationDate))
             }
 
             // ── Save ──────────────────────────────────────────
@@ -77,7 +73,8 @@ struct ReviewRow: View {
             item: FoodItem(
                 name: "Ground Beef", amountType: .portions, amountValue: 4,
                 storagePlace: "Freezer", itemType: "Meat",
-                purchaseDate: Date(), estimatedShelfLifeDays: 90, expirationDate: nil
+                purchaseDate: Date(), estimatedShelfLifeDays: 90,
+                expirationDate: Calendar.current.date(byAdding: .day, value: 90, to: Date()) ?? Date()
             ),
             onSave: { _ in }
         )

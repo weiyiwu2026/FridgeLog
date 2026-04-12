@@ -14,5 +14,5 @@ struct FoodItem: Identifiable {
     var itemType: String            // "Produce", "Meat", "Dairy", "Packaged", "Frozen", "Pantry", "Other"
     var purchaseDate: Date
     var estimatedShelfLifeDays: Int
-    var expirationDate: Date?
+    var expirationDate: Date        // always = purchaseDate + estimatedShelfLifeDays
 }

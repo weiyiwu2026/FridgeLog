@@ -14,8 +14,7 @@ struct ManualEntryView: View {
     @State private var itemType           = ""      // empty = not yet chosen
     @State private var purchaseDate       = Date()
     @State private var shelfLifeDays      = 7
-    @State private var hasExpirationDate  = false
-    @State private var expirationDate     = Date()
+    @State private var expirationDate     = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
 
     @State private var showNameError      = false
     @State private var showItemTypeError  = false
@@ -23,7 +22,8 @@ struct ManualEntryView: View {
     @State private var reviewItem         = FoodItem(
         name: "", amountType: .quantity, amountValue: 1,
         storagePlace: "Fridge", itemType: "Other",
-        purchaseDate: Date(), estimatedShelfLifeDays: 7, expirationDate: nil
+        purchaseDate: Date(), estimatedShelfLifeDays: 7,
+        expirationDate: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
     )
 
     let storagePlaces = ["Fridge", "Freezer", "Pantry"]
@@ -53,9 +53,15 @@ struct ManualEntryView: View {
                         if !trimmed.isEmpty { showNameError = false }
 
                         if let defaultType = foodNameStore.defaultItemType(for: trimmed) {
-                            // Known item — auto-fill type
+                            // Known item — auto-fill type, storage place, and shelf life
                             itemType = defaultType
                             showItemTypeError = false
+                            if let place = foodNameStore.defaultStoragePlace(for: trimmed) {
+                                storagePlace = place
+                            }
+                            if let days = foodNameStore.defaultShelfLifeDays(for: trimmed) {
+                                shelfLifeDays = days
+                            }
                         } else {
                             // Unknown item — clear type so user must choose
                             itemType = ""
@@ -73,6 +79,10 @@ struct ManualEntryView: View {
                     Button(action: {
                         name = entry.name
                         itemType = entry.itemType
+                        storagePlace = entry.storagePlace
+                        if let days = foodNameStore.defaultShelfLifeDays(for: entry.name) {
+                            shelfLifeDays = days
+                        }
                         showItemTypeError = false
                     }) {
                         Label(entry.name, systemImage: "magnifyingglass")
@@ -123,20 +133,29 @@ struct ManualEntryView: View {
             }
 
             // ── Dates ─────────────────────────────────────────
+            // These three values are always kept in sync:
+            //   expirationDate = purchaseDate + shelfLifeDays
+            //   shelfLifeDays  = days from purchaseDate to expirationDate
             Section(header: Text("Dates")) {
                 DatePicker("Purchase Date", selection: $purchaseDate, displayedComponents: .date)
+                    .onChange(of: purchaseDate) { _ in
+                        expirationDate = Calendar.current.date(byAdding: .day, value: shelfLifeDays, to: purchaseDate) ?? purchaseDate
+                    }
 
                 Stepper(
                     "Shelf Life: \(shelfLifeDays) day\(shelfLifeDays == 1 ? "" : "s")",
                     value: $shelfLifeDays, in: 1...365
                 )
-
-                Toggle("Enter Exact Expiration Date", isOn: $hasExpirationDate)
-
-                if hasExpirationDate {
-                    DatePicker("Expiration Date", selection: $expirationDate,
-                               in: Date()..., displayedComponents: .date)
+                .onChange(of: shelfLifeDays) { _ in
+                    expirationDate = Calendar.current.date(byAdding: .day, value: shelfLifeDays, to: purchaseDate) ?? purchaseDate
                 }
+
+                DatePicker("Expiration Date", selection: $expirationDate,
+                           in: purchaseDate..., displayedComponents: .date)
+                    .onChange(of: expirationDate) { _ in
+                        let days = Calendar.current.dateComponents([.day], from: purchaseDate, to: expirationDate).day ?? 1
+                        shelfLifeDays = max(1, days)
+                    }
             }
         }
         .background(
@@ -177,7 +196,7 @@ struct ManualEntryView: View {
             itemType: itemType,
             purchaseDate: purchaseDate,
             estimatedShelfLifeDays: shelfLifeDays,
-            expirationDate: hasExpirationDate ? expirationDate : nil
+            expirationDate: expirationDate
         )
         showReview = true
     }

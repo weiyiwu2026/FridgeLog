@@ -34,9 +34,9 @@ struct HomeView: View {
                         }
                         .buttonStyle(.plain)
 
-                        // Card 2 – Expiring Soon (placeholder for now)
+                        // Card 2 – Expiring Soon
                         NavigationLink(destination:
-                            PlaceholderView(title: "Expiring Soon")
+                            ExpiringSoonView(items: items)
                         ) {
                             DashboardCard(
                                 title: "Expiring Soon",

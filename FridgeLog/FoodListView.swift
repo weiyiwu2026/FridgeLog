@@ -1,9 +1,13 @@
 import SwiftUI
 
+// MARK: - Current Food List Screen
+
 struct CurrentFoodListView: View {
 
     @Binding var items: [FoodItem]
     let onItemSaved: (FoodItem) -> Void
+
+    @Environment(ToBuyStore.self) private var toBuyStore
 
     @State private var showAddItem     = false
     @State private var fridgeExpanded  = true
@@ -15,45 +19,101 @@ struct CurrentFoodListView: View {
     var pantryItems:  [FoodItem] { items.filter { $0.storagePlace == "Pantry"  } }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                if items.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "refrigerator")
-                            .font(.system(size: 60))
-                            .foregroundColor(.secondary)
-                        Text("No food added yet.")
-                            .font(.title3)
-                            .foregroundColor(.secondary)
-                        Text("Tap + to add your first item.")
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 60)
-                } else {
+        Group {
+            if items.isEmpty {
+                // ── Empty state ───────────────────────────────
+                VStack(spacing: 16) {
+                    Image(systemName: "refrigerator")
+                        .font(.system(size: 60))
+                        .foregroundColor(.secondary)
+                    Text("No food added yet.")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                    Text("Tap + to add your first item.")
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                // ── List with collapsible sections ────────────
+                // List (not ScrollView) is required for native swipe actions.
+                // DisclosureGroup preserves the expand/collapse behaviour.
+                // Swipe left on any row → blue "Buy List" button.
+                List {
                     if !fridgeItems.isEmpty {
-                        StorageSection(title: "Fridge", icon: "refrigerator",
-                                       isExpanded: $fridgeExpanded, items: fridgeItems)
+                        Section {
+                            DisclosureGroup(isExpanded: $fridgeExpanded) {
+                                ForEach(fridgeItems) { item in
+                                    ItemRow(item: item)
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                            Button {
+                                                toBuyStore.add(ToBuyItem(name: item.name))
+                                            } label: {
+                                                Label("Buy List", systemImage: "cart.badge.plus")
+                                            }
+                                            .tint(.blue)
+                                        }
+                                }
+                            } label: {
+                                Label("Fridge", systemImage: "refrigerator")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                            }
+                        }
                     }
+
                     if !freezerItems.isEmpty {
-                        StorageSection(title: "Freezer", icon: "snowflake",
-                                       isExpanded: $freezerExpanded, items: freezerItems)
+                        Section {
+                            DisclosureGroup(isExpanded: $freezerExpanded) {
+                                ForEach(freezerItems) { item in
+                                    ItemRow(item: item)
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                            Button {
+                                                toBuyStore.add(ToBuyItem(name: item.name))
+                                            } label: {
+                                                Label("Buy List", systemImage: "cart.badge.plus")
+                                            }
+                                            .tint(.blue)
+                                        }
+                                }
+                            } label: {
+                                Label("Freezer", systemImage: "snowflake")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                            }
+                        }
                     }
+
                     if !pantryItems.isEmpty {
-                        StorageSection(title: "Pantry", icon: "archivebox",
-                                       isExpanded: $pantryExpanded, items: pantryItems)
+                        Section {
+                            DisclosureGroup(isExpanded: $pantryExpanded) {
+                                ForEach(pantryItems) { item in
+                                    ItemRow(item: item)
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                            Button {
+                                                toBuyStore.add(ToBuyItem(name: item.name))
+                                            } label: {
+                                                Label("Buy List", systemImage: "cart.badge.plus")
+                                            }
+                                            .tint(.blue)
+                                        }
+                                }
+                            } label: {
+                                Label("Pantry", systemImage: "archivebox")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                            }
+                        }
                     }
                 }
+                .listStyle(.insetGrouped)
             }
-            .padding()
         }
         .navigationTitle("Current Food List")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { showAddItem = true }) {
-                    Image(systemName: "plus")
-                        .font(.title3)
+                    Image(systemName: "plus").font(.title3)
                 }
             }
         }
@@ -63,65 +123,6 @@ struct CurrentFoodListView: View {
                 showAddItem = false
             })
         }
-    }
-}
-
-// MARK: - Collapsible Storage Section
-
-struct StorageSection: View {
-    let title: String
-    let icon: String
-    @Binding var isExpanded: Bool
-    let items: [FoodItem]
-
-    @Environment(ToBuyStore.self) private var toBuyStore
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Button(action: {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isExpanded.toggle()
-                }
-            }) {
-                HStack {
-                    Label(title, systemImage: icon)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                        .foregroundColor(.secondary)
-                        .animation(.easeInOut(duration: 0.2), value: isExpanded)
-                }
-                .padding()
-            }
-
-            if isExpanded {
-                Divider()
-                ForEach(items) { item in
-                    ItemRow(item: item)
-                        .padding(.horizontal)
-                        // Long-press context menu to add item to To Buy List.
-                        // Note: native swipe actions require List rows.
-                        // The current ScrollView layout uses context menu instead.
-                        // This can be migrated to a swipe action in a future step
-                        // if the layout is converted to List.
-                        .contextMenu {
-                            Button {
-                                toBuyStore.add(ToBuyItem(name: item.name))
-                            } label: {
-                                Label("Add to To Buy List", systemImage: "cart.badge.plus")
-                            }
-                        }
-                    if item.id != items.last?.id {
-                        Divider().padding(.leading)
-                    }
-                }
-                .padding(.bottom, 8)
-            }
-        }
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(12)
     }
 }
 
@@ -155,8 +156,7 @@ struct ItemRow: View {
             .font(.subheadline)
             .foregroundColor(.secondary)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
     }
 }
 
@@ -164,5 +164,6 @@ struct ItemRow: View {
     NavigationView {
         CurrentFoodListView(items: .constant(sampleItems), onItemSaved: { _ in })
     }
+    .environment(ToBuyStore())
     .environment(FoodNameStore())
 }

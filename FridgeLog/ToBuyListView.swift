@@ -4,11 +4,15 @@ import SwiftUI
 
 struct ToBuyListView: View {
 
-    @Environment(ToBuyStore.self)   private var toBuyStore
-    @State private var showAddItem = false
+    @Environment(ToBuyStore.self)    private var toBuyStore
+    @State private var showAddItem  = false
 
-    private var pendingItems: [ToBuyItem] { toBuyStore.items.filter { !$0.isBought  } }
-    private var boughtItems:  [ToBuyItem] { toBuyStore.items.filter {  $0.isBought  } }
+    // ── Selection mode state ─────────────────────────────────────
+    @State private var isSelecting  = false
+    @State private var selectedIDs: Set<UUID> = []
+
+    private var pendingItems: [ToBuyItem] { toBuyStore.items.filter { !$0.isBought } }
+    private var boughtItems:  [ToBuyItem] { toBuyStore.items.filter {  $0.isBought } }
 
     var body: some View {
         Group {
@@ -33,15 +37,13 @@ struct ToBuyListView: View {
                     if !pendingItems.isEmpty {
                         Section("To Buy") {
                             ForEach(pendingItems) { item in
-                                ToBuyRow(item: item)
-                                    // Swipe right → mark as bought
+                                selectableRow(for: item)
                                     .swipeActions(edge: .leading, allowsFullSwipe: true) {
                                         Button { toBuyStore.toggleBought(item) } label: {
                                             Label("Bought", systemImage: "checkmark.circle.fill")
                                         }
                                         .tint(.green)
                                     }
-                                    // Swipe left → delete
                                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                         Button(role: .destructive) {
                                             toBuyStore.delete(item: item)
@@ -57,15 +59,13 @@ struct ToBuyListView: View {
                     if !boughtItems.isEmpty {
                         Section {
                             ForEach(boughtItems) { item in
-                                ToBuyRow(item: item)
-                                    // Swipe right → undo bought
+                                selectableRow(for: item)
                                     .swipeActions(edge: .leading, allowsFullSwipe: true) {
                                         Button { toBuyStore.toggleBought(item) } label: {
                                             Label("Undo", systemImage: "arrow.uturn.left")
                                         }
                                         .tint(.orange)
                                     }
-                                    // Swipe left → delete
                                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                         Button(role: .destructive) {
                                             toBuyStore.delete(item: item)
@@ -90,16 +90,118 @@ struct ToBuyListView: View {
         }
         .navigationTitle("To Buy List")
         .navigationBarTitleDisplayMode(.inline)
+        // ── Toolbar ───────────────────────────────────────────────
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { showAddItem = true }) {
-                    Image(systemName: "plus").font(.title3)
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                // "+" is hidden during selection mode
+                if !isSelecting {
+                    Button(action: { showAddItem = true }) {
+                        Image(systemName: "plus").font(.title3)
+                    }
                 }
+                // "Select" enters selection mode; "Done" exits it
+                Button(isSelecting ? "Done" : "Select") {
+                    if isSelecting { exitSelectionMode() } else { isSelecting = true }
+                }
+            }
+        }
+        // ── Bottom action bar (visible in selection mode only) ────
+        .safeAreaInset(edge: .bottom) {
+            if isSelecting {
+                HStack(spacing: 12) {
+                    // Mark as Bought
+                    Button(action: markSelectedAsBought) {
+                        Label("Mark Bought", systemImage: "checkmark.circle")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(selectedIDs.isEmpty ? Color(.systemGray5) : Color.green)
+                            .foregroundColor(selectedIDs.isEmpty ? .secondary : .white)
+                            .cornerRadius(12)
+                    }
+                    .disabled(selectedIDs.isEmpty)
+
+                    // Remove
+                    Button(action: removeSelected) {
+                        Label("Remove", systemImage: "trash")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(selectedIDs.isEmpty ? Color(.systemGray5) : Color.red)
+                            .foregroundColor(selectedIDs.isEmpty ? .secondary : .white)
+                            .cornerRadius(12)
+                    }
+                    .disabled(selectedIDs.isEmpty)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 12)
+                .background(.regularMaterial)
             }
         }
         .sheet(isPresented: $showAddItem) {
             AddToBuyItemView()
         }
+    }
+
+    // MARK: - Selectable Row
+
+    // Wraps ToBuyRow with a leading circle/checkmark in selection mode.
+    // Tapping the row toggles its selection when isSelecting is true.
+    @ViewBuilder
+    private func selectableRow(for item: ToBuyItem) -> some View {
+        HStack(spacing: 12) {
+            if isSelecting {
+                Image(systemName: selectedIDs.contains(item.id)
+                      ? "checkmark.circle.fill"
+                      : "circle")
+                    .font(.title3)
+                    .foregroundColor(selectedIDs.contains(item.id) ? .accentColor : .secondary)
+                    .animation(.easeInOut(duration: 0.15), value: selectedIDs.contains(item.id))
+            }
+            ToBuyRow(item: item)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isSelecting { toggleSelection(item) }
+        }
+    }
+
+    // MARK: - Selection Helpers
+
+    private func toggleSelection(_ item: ToBuyItem) {
+        if selectedIDs.contains(item.id) {
+            selectedIDs.remove(item.id)
+        } else {
+            selectedIDs.insert(item.id)
+        }
+    }
+
+    // Mark all selected items as bought (silently skips items already bought).
+    // Exits selection mode after — the user has completed their action.
+    private func markSelectedAsBought() {
+        for id in selectedIDs {
+            if let item = toBuyStore.items.first(where: { $0.id == id }), !item.isBought {
+                toBuyStore.toggleBought(item)
+            }
+        }
+        exitSelectionMode()
+    }
+
+    // Delete all selected items.
+    // Exits selection mode after — the user has completed their action.
+    private func removeSelected() {
+        for id in selectedIDs {
+            if let item = toBuyStore.items.first(where: { $0.id == id }) {
+                toBuyStore.delete(item: item)
+            }
+        }
+        exitSelectionMode()
+    }
+
+    // Clears selected IDs and leaves selection mode.
+    private func exitSelectionMode() {
+        isSelecting = false
+        selectedIDs.removeAll()
     }
 }
 
@@ -110,15 +212,12 @@ struct ToBuyRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-
             VStack(alignment: .leading, spacing: 3) {
-                // Name — struck through when bought
                 Text(item.name)
                     .font(.headline)
                     .strikethrough(item.isBought, color: .secondary)
                     .foregroundColor(item.isBought ? .secondary : .primary)
 
-                // Store and note on a second line (only if present)
                 let hasStore = !item.store.isEmpty
                 let hasNote  = !item.note.isEmpty
                 if hasStore || hasNote {
@@ -139,7 +238,6 @@ struct ToBuyRow: View {
 
             Spacer()
 
-            // Green checkmark badge when bought
             if item.isBought {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
@@ -154,8 +252,8 @@ struct ToBuyRow: View {
 
 struct AddToBuyItemView: View {
 
-    @Environment(\.dismiss)         private var dismiss
-    @Environment(ToBuyStore.self)   private var toBuyStore
+    @Environment(\.dismiss)          private var dismiss
+    @Environment(ToBuyStore.self)    private var toBuyStore
     @Environment(FoodNameStore.self) private var foodNameStore
 
     @State private var name  = ""
@@ -163,15 +261,11 @@ struct AddToBuyItemView: View {
     @State private var note  = ""
     @State private var showNameError = false
 
-    // Suggestions shown as the user types the item name.
-    // Pulls from:  1) built-in and custom food names (via FoodNameStore)
-    //              2) names the user has previously added to the buy list
     private var suggestions: [String] {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return [] }
 
         let fromFood = foodNameStore.suggestions(for: trimmed).map { $0.name }
-
         let fromBuyList = toBuyStore.allItemNames.filter {
             $0.lowercased().contains(trimmed.lowercased()) &&
             $0.lowercased() != trimmed.lowercased()
@@ -186,8 +280,6 @@ struct AddToBuyItemView: View {
     var body: some View {
         NavigationView {
             Form {
-
-                // ── Item name + autocomplete ──────────────────
                 Section(header: Text("Item")) {
                     TextField("Item name (e.g. Milk)", text: $name)
                         .autocorrectionDisabled()
@@ -203,7 +295,6 @@ struct AddToBuyItemView: View {
                             .font(.caption)
                     }
 
-                    // Autocomplete suggestion rows
                     ForEach(suggestions, id: \.self) { suggestion in
                         Button(action: { name = suggestion }) {
                             Label(suggestion, systemImage: "magnifyingglass")
@@ -213,7 +304,6 @@ struct AddToBuyItemView: View {
                     }
                 }
 
-                // ── Optional details ─────────────────────────
                 Section(header: Text("Optional Details")) {
                     TextField("Store (e.g. Costco)", text: $store)
                     TextField("Note or quantity (e.g. 2 packs)", text: $note)

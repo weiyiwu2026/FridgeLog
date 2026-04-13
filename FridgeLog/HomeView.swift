@@ -61,9 +61,9 @@ struct HomeView: View {
                         }
                         .buttonStyle(.plain)
 
-                        // Card 4 – What to Eat Today (placeholder for now)
+                        // Card 4 – What to Eat Today
                         NavigationLink(destination:
-                            PlaceholderView(title: "What to Eat Today")
+                            FoodIdeasView(items: items)
                         ) {
                             DashboardCard(
                                 title: "What to Eat Today",

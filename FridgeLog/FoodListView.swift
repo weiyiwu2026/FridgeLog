@@ -74,6 +74,8 @@ struct StorageSection: View {
     @Binding var isExpanded: Bool
     let items: [FoodItem]
 
+    @Environment(ToBuyStore.self) private var toBuyStore
+
     var body: some View {
         VStack(spacing: 0) {
             Button(action: {
@@ -99,6 +101,18 @@ struct StorageSection: View {
                 ForEach(items) { item in
                     ItemRow(item: item)
                         .padding(.horizontal)
+                        // Long-press context menu to add item to To Buy List.
+                        // Note: native swipe actions require List rows.
+                        // The current ScrollView layout uses context menu instead.
+                        // This can be migrated to a swipe action in a future step
+                        // if the layout is converted to List.
+                        .contextMenu {
+                            Button {
+                                toBuyStore.add(ToBuyItem(name: item.name))
+                            } label: {
+                                Label("Add to To Buy List", systemImage: "cart.badge.plus")
+                            }
+                        }
                     if item.id != items.last?.id {
                         Divider().padding(.leading)
                     }

@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
 
     @Environment(FoodNameStore.self) private var foodNameStore
+    @Environment(ToBuyStore.self)   private var toBuyStore
     @State private var items: [FoodItem] = sampleItems
     @State private var showAddItem = false
 
@@ -48,14 +49,14 @@ struct HomeView: View {
                         }
                         .buttonStyle(.plain)
 
-                        // Card 3 – To Buy List (placeholder for now)
-                        NavigationLink(destination:
-                            PlaceholderView(title: "To Buy List")
-                        ) {
+                        // Card 3 – To Buy List
+                        NavigationLink(destination: ToBuyListView()) {
                             DashboardCard(
                                 title: "To Buy List",
                                 icon: "cart",
-                                badge: "Coming soon"
+                                badge: toBuyStore.pendingCount > 0
+                                    ? "\(toBuyStore.pendingCount) item\(toBuyStore.pendingCount == 1 ? "" : "s")"
+                                    : "Empty"
                             )
                         }
                         .buttonStyle(.plain)

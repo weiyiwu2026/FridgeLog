@@ -14,14 +14,43 @@ struct CurrentFoodListView: View {
     @State private var freezerExpanded = true
     @State private var pantryExpanded  = true
 
-    var fridgeItems:  [FoodItem] { items.filter { $0.storagePlace == "Fridge"  } }
-    var freezerItems: [FoodItem] { items.filter { $0.storagePlace == "Freezer" } }
-    var pantryItems:  [FoodItem] { items.filter { $0.storagePlace == "Pantry"  } }
+    // ── Search & Filter state ─────────────────────────────────
+    @State private var searchText:            String  = ""
+    @State private var selectedStoragePlace:  String? = nil   // nil = All
+    @State private var selectedItemType:      String? = nil   // nil = All
+
+    // ── Derived data ──────────────────────────────────────────
+
+    // Unique item types present in the inventory, shown in the filter menu.
+    private var availableItemTypes: [String] {
+        Array(Set(items.map { $0.itemType })).sorted()
+    }
+
+    // Items after applying search text + both filter selections.
+    private var filteredItems: [FoodItem] {
+        items.filter { item in
+            let matchesSearch = searchText.isEmpty ||
+                item.name.localizedCaseInsensitiveContains(searchText)
+            let matchesPlace  = selectedStoragePlace == nil ||
+                item.storagePlace == selectedStoragePlace
+            let matchesType   = selectedItemType == nil ||
+                item.itemType == selectedItemType
+            return matchesSearch && matchesPlace && matchesType
+        }
+    }
+
+    var fridgeItems:  [FoodItem] { filteredItems.filter { $0.storagePlace == "Fridge"  } }
+    var freezerItems: [FoodItem] { filteredItems.filter { $0.storagePlace == "Freezer" } }
+    var pantryItems:  [FoodItem] { filteredItems.filter { $0.storagePlace == "Pantry"  } }
+
+    private var isFiltering: Bool { selectedStoragePlace != nil || selectedItemType != nil }
+
+    // ── View ──────────────────────────────────────────────────
 
     var body: some View {
         Group {
             if items.isEmpty {
-                // ── Empty state ───────────────────────────────
+                // ── No items added yet ────────────────────────
                 VStack(spacing: 16) {
                     Image(systemName: "refrigerator")
                         .font(.system(size: 60))
@@ -33,11 +62,25 @@ struct CurrentFoodListView: View {
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            } else if filteredItems.isEmpty {
+                // ── Items exist but search/filter found nothing ──
+                VStack(spacing: 16) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 60))
+                        .foregroundColor(.secondary)
+                    Text("No items match.")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                    Text("Try a different search or filter.")
+                        .foregroundColor(.secondary)
+                    Button("Clear Search & Filters") { clearAll() }
+                        .padding(.top, 4)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
             } else {
-                // ── List with collapsible sections ────────────
-                // List (not ScrollView) is required for native swipe actions.
-                // DisclosureGroup preserves the expand/collapse behaviour.
-                // Swipe left on any row → blue "Buy List" button.
+                // ── Filtered list with collapsible sections ───
                 List {
                     if !fridgeItems.isEmpty {
                         Section {
@@ -110,8 +153,49 @@ struct CurrentFoodListView: View {
         }
         .navigationTitle("Current Food List")
         .navigationBarTitleDisplayMode(.inline)
+        // ── Search bar ────────────────────────────────────────
+        .searchable(text: $searchText, prompt: "Search items")
+        // ── Toolbar ───────────────────────────────────────────
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+
+                // Filter menu (filled icon when any filter is active)
+                Menu {
+                    Section("Storage Place") {
+                        Button { selectedStoragePlace = nil } label: {
+                            selectedStoragePlace == nil
+                                ? Label("All", systemImage: "checkmark")
+                                : Label("All", systemImage: "")
+                        }
+                        ForEach(["Fridge", "Freezer", "Pantry"], id: \.self) { place in
+                            Button { selectedStoragePlace = place } label: {
+                                selectedStoragePlace == place
+                                    ? Label(place, systemImage: "checkmark")
+                                    : Label(place, systemImage: "")
+                            }
+                        }
+                    }
+
+                    Section("Item Type") {
+                        Button { selectedItemType = nil } label: {
+                            selectedItemType == nil
+                                ? Label("All", systemImage: "checkmark")
+                                : Label("All", systemImage: "")
+                        }
+                        ForEach(availableItemTypes, id: \.self) { type in
+                            Button { selectedItemType = type } label: {
+                                selectedItemType == type
+                                    ? Label(type, systemImage: "checkmark")
+                                    : Label(type, systemImage: "")
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: isFiltering
+                          ? "line.3.horizontal.decrease.circle.fill"
+                          : "line.3.horizontal.decrease.circle")
+                }
+
                 Button(action: { showAddItem = true }) {
                     Image(systemName: "plus").font(.title3)
                 }
@@ -123,6 +207,14 @@ struct CurrentFoodListView: View {
                 showAddItem = false
             })
         }
+    }
+
+    // MARK: - Helpers
+
+    private func clearAll() {
+        searchText           = ""
+        selectedStoragePlace = nil
+        selectedItemType     = nil
     }
 }
 

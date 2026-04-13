@@ -33,25 +33,25 @@ private struct IdeaTemplate {
     let title:            String
     let description:      String
     let mealTime:         MealTime
-    let requiredTypes:    [String]   // match against item.itemType
-    let requiredKeywords: [String]   // match against item.name (case-insensitive)
-    let minMatchCount:    Int        // how many qualifying items are needed
+    let requiredTypes:    [String]
+    let requiredKeywords: [String]
+    let minMatchCount:    Int
+    let labels:           [String]   // used for filtering (e.g. "Healthy", "Chinese", "Salad")
 }
 
-// MARK: - Generated Idea (result shown to user)
+// MARK: - Generated Idea (shown to user)
 
 struct FoodIdea: Identifiable {
     let id            = UUID()
     let title:         String
     let description:   String
     let mealTime:      MealTime
-    let matchedItems:  [FoodItem]   // up to 4 items from the inventory
-    let hasExpiringSoon: Bool       // true if any matched item expires within 7 days
+    let labels:        [String]
+    let matchedItems:  [FoodItem]
+    let hasExpiringSoon: Bool
 }
 
 // MARK: - Template Library
-// Rules: match by itemType OR by a keyword found anywhere in the item name.
-// minMatchCount = how many qualifying items must exist before this idea is shown.
 
 private let ideaTemplates: [IdeaTemplate] = [
 
@@ -62,7 +62,8 @@ private let ideaTemplates: [IdeaTemplate] = [
         mealTime: .breakfast,
         requiredTypes: ["Dairy & Eggs"],
         requiredKeywords: ["egg"],
-        minMatchCount: 1
+        minMatchCount: 1,
+        labels: ["Breakfast", "Healthy"]
     ),
     IdeaTemplate(
         title: "Yogurt Bowl",
@@ -70,7 +71,8 @@ private let ideaTemplates: [IdeaTemplate] = [
         mealTime: .breakfast,
         requiredTypes: [],
         requiredKeywords: ["yogurt"],
-        minMatchCount: 1
+        minMatchCount: 1,
+        labels: ["Breakfast", "Snack", "Healthy"]
     ),
     IdeaTemplate(
         title: "Oatmeal",
@@ -78,7 +80,8 @@ private let ideaTemplates: [IdeaTemplate] = [
         mealTime: .breakfast,
         requiredTypes: [],
         requiredKeywords: ["oat", "oatmeal"],
-        minMatchCount: 1
+        minMatchCount: 1,
+        labels: ["Breakfast", "Healthy"]
     ),
 
     // ── Lunch ─────────────────────────────────────────────────
@@ -88,7 +91,8 @@ private let ideaTemplates: [IdeaTemplate] = [
         mealTime: .lunch,
         requiredTypes: ["Produce"],
         requiredKeywords: ["lettuce", "spinach", "kale", "arugula", "salad"],
-        minMatchCount: 1
+        minMatchCount: 1,
+        labels: ["Lunch", "Healthy", "Salad"]
     ),
     IdeaTemplate(
         title: "Sandwich or Wrap",
@@ -96,7 +100,8 @@ private let ideaTemplates: [IdeaTemplate] = [
         mealTime: .lunch,
         requiredTypes: ["Bakery", "Deli & Prepared"],
         requiredKeywords: ["bread", "wrap", "tortilla", "baguette", "roll"],
-        minMatchCount: 1
+        minMatchCount: 1,
+        labels: ["Lunch"]
     ),
 
     // ── Dinner ────────────────────────────────────────────────
@@ -107,7 +112,17 @@ private let ideaTemplates: [IdeaTemplate] = [
         requiredTypes: ["Meat & Seafood", "Produce"],
         requiredKeywords: ["chicken", "beef", "pork", "shrimp", "broccoli",
                            "pepper", "carrot", "onion", "tofu"],
-        minMatchCount: 2
+        minMatchCount: 2,
+        labels: ["Dinner", "Healthy", "Chinese"]
+    ),
+    IdeaTemplate(
+        title: "Fried Rice",
+        description: "A classic one-pan Chinese dish — great for using up leftover rice and vegetables.",
+        mealTime: .dinner,
+        requiredTypes: [],
+        requiredKeywords: ["rice", "egg", "onion", "carrot", "pea", "soy"],
+        minMatchCount: 2,
+        labels: ["Dinner", "Chinese"]
     ),
     IdeaTemplate(
         title: "Grain Bowl",
@@ -115,7 +130,8 @@ private let ideaTemplates: [IdeaTemplate] = [
         mealTime: .dinner,
         requiredTypes: ["Pantry"],
         requiredKeywords: ["rice", "quinoa", "pasta", "noodle", "lentil"],
-        minMatchCount: 1
+        minMatchCount: 1,
+        labels: ["Dinner", "Healthy"]
     ),
     IdeaTemplate(
         title: "Meat Dish",
@@ -124,7 +140,8 @@ private let ideaTemplates: [IdeaTemplate] = [
         requiredTypes: ["Meat & Seafood"],
         requiredKeywords: ["chicken", "beef", "pork", "salmon", "fish",
                            "turkey", "lamb", "steak"],
-        minMatchCount: 1
+        minMatchCount: 1,
+        labels: ["Dinner"]
     ),
     IdeaTemplate(
         title: "Soup or Stew",
@@ -133,7 +150,8 @@ private let ideaTemplates: [IdeaTemplate] = [
         requiredTypes: [],
         requiredKeywords: ["carrot", "potato", "onion", "celery", "tomato",
                            "broth", "soup", "squash", "zucchini"],
-        minMatchCount: 2
+        minMatchCount: 2,
+        labels: ["Dinner", "Healthy"]
     ),
     IdeaTemplate(
         title: "Frozen Meal",
@@ -141,7 +159,8 @@ private let ideaTemplates: [IdeaTemplate] = [
         mealTime: .dinner,
         requiredTypes: ["Frozen"],
         requiredKeywords: ["frozen", "pizza", "burrito", "lasagna", "meal"],
-        minMatchCount: 1
+        minMatchCount: 1,
+        labels: ["Dinner"]
     ),
 
     // ── Snack ─────────────────────────────────────────────────
@@ -152,7 +171,8 @@ private let ideaTemplates: [IdeaTemplate] = [
         requiredTypes: [],
         requiredKeywords: ["apple", "banana", "orange", "berry", "berries",
                            "grape", "melon", "peach", "pear", "mango", "fruit"],
-        minMatchCount: 1
+        minMatchCount: 1,
+        labels: ["Snack", "Healthy"]
     ),
     IdeaTemplate(
         title: "Smoothie",
@@ -161,7 +181,8 @@ private let ideaTemplates: [IdeaTemplate] = [
         requiredTypes: [],
         requiredKeywords: ["banana", "berry", "berries", "milk", "yogurt",
                            "spinach", "mango", "peach"],
-        minMatchCount: 2
+        minMatchCount: 2,
+        labels: ["Breakfast", "Snack", "Healthy"]
     ),
     IdeaTemplate(
         title: "Cheese & Snack",
@@ -169,19 +190,12 @@ private let ideaTemplates: [IdeaTemplate] = [
         mealTime: .snack,
         requiredTypes: ["Dairy & Eggs", "Snacks"],
         requiredKeywords: ["cheese", "cracker", "chip"],
-        minMatchCount: 1
+        minMatchCount: 1,
+        labels: ["Snack"]
     ),
 ]
 
 // MARK: - Idea Generator
-
-// Rules:
-//   1. An item qualifies for a template if its itemType is in requiredTypes
-//      OR its name contains any of the requiredKeywords (case-insensitive).
-//   2. A template becomes an idea only if at least minMatchCount items qualify.
-//   3. Ideas are sorted so those using expiring-soon items come first,
-//      then by number of matched items (more is better).
-//   4. At most 6 ideas are returned.
 
 private func generateIdeas(from items: [FoodItem]) -> [FoodIdea] {
     let cutoff = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
@@ -205,6 +219,7 @@ private func generateIdeas(from items: [FoodItem]) -> [FoodIdea] {
             title:          template.title,
             description:    template.description,
             mealTime:       template.mealTime,
+            labels:         template.labels,
             matchedItems:   Array(matched.prefix(4)),
             hasExpiringSoon: hasExpiring
         ))
@@ -225,15 +240,45 @@ struct FoodIdeasView: View {
 
     let items: [FoodItem]
 
-    private var ideas: [FoodIdea] { generateIdeas(from: items) }
+    // All generated ideas (before label filter)
+    private var allIdeas: [FoodIdea] { generateIdeas(from: items) }
 
-    // Items expiring within 7 days, sorted soonest first
+    // Full label catalogue — always available in the filter menu
+    private let availableLabels: [String] = [
+        "American", "Italian", "Chinese", "Japanese", "Sushi", "Ramen",
+        "Mexican", "Indian", "Thai", "Korean", "Vietnamese", "Mediterranean",
+        "Greek", "Middle Eastern", "Turkish", "Spanish", "French", "Caribbean",
+        "African", "Ethiopian", "Nigerian", "Latin American", "Peruvian",
+        "Brazilian", "Burgers", "Pizza", "Sandwiches", "Subs", "Fast Food",
+        "Chicken", "Wings", "Hot Dogs", "Wraps", "BBQ", "Barbecue", "Salads",
+        "Healthy", "Vegetarian", "Vegan", "Gluten-Free", "Organic", "Noodles",
+        "Poke", "Rice Bowls", "Bento", "Dessert", "Ice Cream", "Frozen Yogurt",
+        "Bakery", "Donuts", "Coffee", "Tea", "Juice", "Smoothies", "Tacos",
+        "Street Food", "Food Trucks", "Tapas", "Small Plates", "Breakfast",
+        "Brunch", "Lunch", "Dinner", "Late Night", "Halal", "Kosher",
+        "Filipino", "Malaysian", "Indonesian", "Nepali", "Afghan", "Hawaiian",
+        "Cajun", "Creole", "Southern", "Soul Food", "Snack",
+    ]
+
+    // Ideas shown after applying the selected label filter
+    private var filteredIdeas: [FoodIdea] {
+        guard let label = selectedLabel else { return allIdeas }
+        return allIdeas.filter { $0.labels.contains(label) }
+    }
+
+    // Items expiring within 7 days (used for fallback card)
     private var expiringSoon: [FoodItem] {
         let cutoff = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
         return items
             .filter { $0.expirationDate <= cutoff }
             .sorted { $0.expirationDate < $1.expirationDate }
     }
+
+    @State private var selectedLabel: String?    = nil
+    @State private var showAddRecipe:  Bool      = false
+    @State private var showSearch:     Bool      = false
+
+    private var isFiltering: Bool { selectedLabel != nil }
 
     var body: some View {
         ScrollView {
@@ -255,21 +300,164 @@ struct FoodIdeasView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 60)
 
-                } else if ideas.isEmpty {
-                    // ── Items exist but nothing matched ───────
+                } else if filteredIdeas.isEmpty && !isFiltering {
+                    // ── Items exist but nothing matched any template ──
                     FallbackIdeaCard(expiringSoon: expiringSoon, items: items)
 
+                } else if filteredIdeas.isEmpty && isFiltering {
+                    // ── Filter active but no results ──────────
+                    VStack(spacing: 16) {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                            .font(.system(size: 60))
+                            .foregroundColor(.secondary)
+                        Text("No ideas for \"\(selectedLabel ?? "")\".")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                        Text("Try a different label or clear the filter.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 60)
+
                 } else {
+                    // ── Active filter chip ────────────────────
+                    if isFiltering {
+                        HStack(spacing: 8) {
+                            Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                                .foregroundColor(.accentColor)
+                            Text("Label: \(selectedLabel ?? "")")
+                                .font(.subheadline)
+                                .foregroundColor(.accentColor)
+                            Spacer()
+                            Button("Clear") { selectedLabel = nil }
+                                .font(.subheadline)
+                        }
+                        .padding(.horizontal, 4)
+                    }
+
                     // ── Idea cards ────────────────────────────
-                    ForEach(ideas) { idea in
+                    ForEach(filteredIdeas) { idea in
                         FoodIdeaCard(idea: idea)
                     }
                 }
             }
             .padding()
+            // Extra bottom padding so content is not hidden behind the action bar
+            .padding(.bottom, 80)
         }
         .navigationTitle("What to Eat Today")
         .navigationBarTitleDisplayMode(.inline)
+        // ── Filter menu ───────────────────────────────────────
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    // "All" option
+                    Button { selectedLabel = nil } label: {
+                        selectedLabel == nil
+                            ? Label("All", systemImage: "checkmark")
+                            : Label("All", systemImage: "")
+                    }
+
+                    // One button per available label
+                    ForEach(availableLabels, id: \.self) { label in
+                        Button { selectedLabel = label } label: {
+                            selectedLabel == label
+                                ? Label(label, systemImage: "checkmark")
+                                : Label(label, systemImage: "")
+                        }
+                    }
+                } label: {
+                    Image(systemName: isFiltering
+                          ? "line.3.horizontal.decrease.circle.fill"
+                          : "line.3.horizontal.decrease.circle")
+                }
+            }
+        }
+        // ── Bottom action bar ─────────────────────────────────
+        .safeAreaInset(edge: .bottom) {
+            HStack(spacing: 12) {
+                // Add My Recipe — placeholder for now
+                Button(action: { showAddRecipe = true }) {
+                    Label("Add My Recipe", systemImage: "plus.circle")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color(.secondarySystemBackground))
+                        .foregroundColor(.accentColor)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.accentColor, lineWidth: 1)
+                        )
+                }
+
+                // Search Online — placeholder for now
+                Button(action: { showSearch = true }) {
+                    Label("Search Online", systemImage: "magnifyingglass")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.accentColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 12)
+            .background(.regularMaterial)
+        }
+        // ── Placeholder sheets ────────────────────────────────
+        .sheet(isPresented: $showAddRecipe) {
+            PlaceholderSheetView(
+                icon: "plus.circle",
+                title: "Add My Recipe",
+                message: "You will be able to add your own recipes here.\nThis feature is coming soon."
+            )
+        }
+        .sheet(isPresented: $showSearch) {
+            PlaceholderSheetView(
+                icon: "magnifyingglass",
+                title: "Search Online",
+                message: "Online recipe search will be available here.\nThis feature is coming soon."
+            )
+        }
+    }
+}
+
+// MARK: - Placeholder Sheet
+
+struct PlaceholderSheetView: View {
+    @Environment(\.dismiss) private var dismiss
+    let icon:    String
+    let title:   String
+    let message: String
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: icon)
+                .font(.system(size: 60))
+                .foregroundColor(.secondary)
+            Text(title)
+                .font(.title2)
+                .fontWeight(.semibold)
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            Spacer()
+            Button("Close") { dismiss() }
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color(.secondarySystemBackground))
+                .cornerRadius(14)
+                .padding(.horizontal)
+                .padding(.bottom)
+        }
     }
 }
 
@@ -310,9 +498,23 @@ struct FoodIdeaCard: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
+            // ── Labels row ────────────────────────────────────
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(idea.labels, id: \.self) { label in
+                        Text(label)
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color(.tertiarySystemBackground))
+                            .cornerRadius(6)
+                    }
+                }
+            }
+
             Divider()
 
-            // ── Matched ingredients from the user's inventory ─
+            // ── Matched ingredients ───────────────────────────
             VStack(alignment: .leading, spacing: 6) {
                 Text("From your kitchen:")
                     .font(.caption)
@@ -366,7 +568,7 @@ struct IngredientRow: View {
     }
 }
 
-// MARK: - Fallback Card (shown when no templates matched)
+// MARK: - Fallback Card
 
 struct FallbackIdeaCard: View {
     let expiringSoon: [FoodItem]

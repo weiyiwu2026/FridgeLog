@@ -197,7 +197,7 @@ private let ideaTemplates: [IdeaTemplate] = [
 
 // MARK: - Idea Generator
 
-private func generateIdeas(from items: [FoodItem]) -> [FoodIdea] {
+func generateIdeas(from items: [FoodItem]) -> [FoodIdea] {
     let cutoff = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
 
     var ideas: [FoodIdea] = []

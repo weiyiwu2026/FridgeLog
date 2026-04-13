@@ -2,18 +2,19 @@ import SwiftUI
 
 struct HomeView: View {
 
-    @Environment(FoodNameStore.self) private var foodNameStore
-    @Environment(ToBuyStore.self)   private var toBuyStore
-    @State private var items: [FoodItem] = sampleItems
+    @Environment(FoodNameStore.self)  private var foodNameStore
+    @Environment(ToBuyStore.self)    private var toBuyStore
+    @Environment(FoodItemStore.self) private var foodItemStore
     @State private var showAddItem = false
 
     // Number of items expiring within the next 7 days — used as a live badge
     private var expiringSoonCount: Int {
         let cutoff = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
-        return items.filter { $0.expirationDate <= cutoff }.count
+        return foodItemStore.items.filter { $0.expirationDate <= cutoff }.count
     }
 
     var body: some View {
+        @Bindable var store = foodItemStore
         NavigationView {
             ScrollView {
                 VStack(spacing: 24) {
@@ -25,19 +26,19 @@ struct HomeView: View {
                     ) {
                         // Card 1 – Current Food List (navigates to real inventory)
                         NavigationLink(destination:
-                            CurrentFoodListView(items: $items, onItemSaved: saveItem)
+                            CurrentFoodListView(items: $store.items, onItemSaved: saveItem)
                         ) {
                             DashboardCard(
                                 title: "Current Food List",
                                 icon: "refrigerator",
-                                badge: "\(items.count) item\(items.count == 1 ? "" : "s")"
+                                badge: "\(foodItemStore.items.count) item\(foodItemStore.items.count == 1 ? "" : "s")"
                             )
                         }
                         .buttonStyle(.plain)
 
                         // Card 2 – Expiring Soon
                         NavigationLink(destination:
-                            ExpiringSoonView(items: items)
+                            ExpiringSoonView(items: foodItemStore.items)
                         ) {
                             DashboardCard(
                                 title: "Expiring Soon",
@@ -63,12 +64,12 @@ struct HomeView: View {
 
                         // Card 4 – What to Eat Today
                         NavigationLink(destination:
-                            FoodIdeasView(items: items)
+                            FoodIdeasView(items: foodItemStore.items)
                         ) {
                             DashboardCard(
                                 title: "What to Eat Today",
                                 icon: "fork.knife",
-                                badge: "Coming soon"
+                                badge: "\(generateIdeas(from: foodItemStore.items).count) idea\(generateIdeas(from: foodItemStore.items).count == 1 ? "" : "s")"
                             )
                         }
                         .buttonStyle(.plain)
@@ -106,17 +107,7 @@ struct HomeView: View {
             storagePlace: newItem.storagePlace,
             shelfLifeDays: newItem.estimatedShelfLifeDays
         )
-        if let index = items.firstIndex(where: {
-            $0.name.lowercased() == newItem.name.lowercased() &&
-            $0.storagePlace      == newItem.storagePlace &&
-            $0.itemType          == newItem.itemType &&
-            $0.amountType        == newItem.amountType &&
-            Calendar.current.isDate($0.expirationDate, inSameDayAs: newItem.expirationDate)
-        }) {
-            items[index].amountValue += newItem.amountValue
-        } else {
-            items.append(newItem)
-        }
+        foodItemStore.add(newItem)
     }
 }
 
@@ -166,4 +157,6 @@ let sampleItems: [FoodItem] = [
 #Preview {
     HomeView()
         .environment(FoodNameStore())
+        .environment(ToBuyStore())
+        .environment(FoodItemStore())
 }

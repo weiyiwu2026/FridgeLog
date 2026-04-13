@@ -15,7 +15,7 @@ struct ContentView: View {
                     Label("Home", systemImage: "house")
                 }
 
-            PlaceholderView(title: "Insights")
+            InsightsView()
                 .tabItem {
                     Label("Insights", systemImage: "chart.bar")
                 }
@@ -31,4 +31,6 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .environment(FoodNameStore())
+        .environment(ToBuyStore())
+        .environment(FoodItemStore())
 }

@@ -10,6 +10,11 @@ import SwiftUI
 
     var items: [FoodItem] = sampleItems
 
+    /// Removes all food items.
+    func clearAll() {
+        items = []
+    }
+
     /// Adds a new item, or increments the amount if an identical item already exists.
     func add(_ newItem: FoodItem) {
         if let index = items.firstIndex(where: {

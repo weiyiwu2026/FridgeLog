@@ -8,6 +8,18 @@
 import SwiftUI
 
 struct ContentView: View {
+
+    // Read the stored appearance preference so the whole app reacts to it.
+    @AppStorage("appearancePreference") private var appearance = "system"
+
+    private var preferredColorScheme: ColorScheme? {
+        switch appearance {
+        case "light": return .light
+        case "dark":  return .dark
+        default:      return nil   // nil = follow the system setting
+        }
+    }
+
     var body: some View {
         TabView {
             HomeView()
@@ -20,11 +32,12 @@ struct ContentView: View {
                     Label("Insights", systemImage: "chart.bar")
                 }
 
-            PlaceholderView(title: "Settings")
+            SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gearshape")
                 }
         }
+        .preferredColorScheme(preferredColorScheme)
     }
 }
 

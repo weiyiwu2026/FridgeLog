@@ -45,6 +45,11 @@ class ToBuyStore {
         save()
     }
 
+    func clearAll() {
+        items = []
+        save()
+    }
+
     // MARK: - Persistence
 
     private func save() {

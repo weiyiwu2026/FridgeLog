@@ -13,7 +13,7 @@ struct AddItemMethodView: View {
                     icon: "barcode.viewfinder",
                     label: "Barcode",
                     description: "Scan a packaged food barcode",
-                    destination: PlaceholderView(title: "Barcode Scanner")
+                    destination: BarcodeScannerView(onItemSaved: onItemSaved)
                 )
                 AddMethodButton(
                     icon: "camera",

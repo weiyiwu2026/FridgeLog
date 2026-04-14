@@ -26,6 +26,22 @@ struct ManualEntryView: View {
         expirationDate: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
     )
 
+    // Designated init used by barcode scanner to pre-fill the form.
+    // All parameters have defaults so existing call sites are unchanged.
+    init(onSave: @escaping (FoodItem) -> Void, prefill: FoodItem? = nil) {
+        self.onSave = onSave
+        if let p = prefill {
+            _name           = State(initialValue: p.name)
+            _amountType     = State(initialValue: p.amountType)
+            _amountValue    = State(initialValue: p.amountValue)
+            _storagePlace   = State(initialValue: p.storagePlace)
+            _itemType       = State(initialValue: p.itemType)
+            _purchaseDate   = State(initialValue: p.purchaseDate)
+            _shelfLifeDays  = State(initialValue: p.estimatedShelfLifeDays)
+            _expirationDate = State(initialValue: p.expirationDate)
+        }
+    }
+
     let storagePlaces = ["Fridge", "Freezer", "Pantry"]
     let itemTypes     = ["Produce", "Dairy & Eggs", "Meat & Seafood", "Frozen", "Pantry", "Snacks", "Beverages", "Bakery", "Deli & Prepared", "Other"]
 

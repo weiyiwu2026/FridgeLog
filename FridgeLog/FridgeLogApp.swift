@@ -12,6 +12,7 @@ struct FridgeLogApp: App {
     @State private var foodNameStore  = FoodNameStore()
     @State private var toBuyStore     = ToBuyStore()
     @State private var foodItemStore  = FoodItemStore()
+    @State private var barcodeStore   = BarcodeStore()
 
     var body: some Scene {
         WindowGroup {
@@ -19,6 +20,7 @@ struct FridgeLogApp: App {
                 .environment(foodNameStore)
                 .environment(toBuyStore)
                 .environment(foodItemStore)
+                .environment(barcodeStore)
         }
     }
 }

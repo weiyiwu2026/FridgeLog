@@ -19,7 +19,7 @@ struct AddItemMethodView: View {
                     icon: "camera",
                     label: "Photo",
                     description: "Take a photo of your food",
-                    destination: PlaceholderView(title: "Photo Scanner")
+                    destination: PhotoScanView(onItemSaved: onItemSaved)
                 )
                 AddMethodButton(
                     icon: "mic",

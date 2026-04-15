@@ -1,12 +1,12 @@
 import Foundation
 
-enum AmountType: String, CaseIterable {
+enum AmountType: String, CaseIterable, Codable {
     case quantity = "Quantity"
     case portions = "Portions"
 }
 
-struct FoodItem: Identifiable {
-    let id = UUID()
+struct FoodItem: Identifiable, Codable {
+    var id: UUID = UUID()
     var name: String
     var amountType: AmountType      // either .quantity or .portions — never both
     var amountValue: Int            // the number, interpreted by amountType

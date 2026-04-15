@@ -5,7 +5,8 @@ import SwiftUI
 struct CurrentFoodListView: View {
 
     @Binding var items: [FoodItem]
-    let onItemSaved: (FoodItem) -> Void
+    let onItemSaved:    (FoodItem) -> Void
+    let onItemDeleted:  (FoodItem) -> Void
 
     @Environment(ToBuyStore.self) private var toBuyStore
 
@@ -87,6 +88,13 @@ struct CurrentFoodListView: View {
                             DisclosureGroup(isExpanded: $fridgeExpanded) {
                                 ForEach(fridgeItems) { item in
                                     ItemRow(item: item)
+                                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                            Button(role: .destructive) {
+                                                onItemDeleted(item)
+                                            } label: {
+                                                Label("Delete", systemImage: "trash")
+                                            }
+                                        }
                                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                             Button {
                                                 toBuyStore.add(ToBuyItem(name: item.name))
@@ -109,6 +117,13 @@ struct CurrentFoodListView: View {
                             DisclosureGroup(isExpanded: $freezerExpanded) {
                                 ForEach(freezerItems) { item in
                                     ItemRow(item: item)
+                                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                            Button(role: .destructive) {
+                                                onItemDeleted(item)
+                                            } label: {
+                                                Label("Delete", systemImage: "trash")
+                                            }
+                                        }
                                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                             Button {
                                                 toBuyStore.add(ToBuyItem(name: item.name))
@@ -131,6 +146,13 @@ struct CurrentFoodListView: View {
                             DisclosureGroup(isExpanded: $pantryExpanded) {
                                 ForEach(pantryItems) { item in
                                     ItemRow(item: item)
+                                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                            Button(role: .destructive) {
+                                                onItemDeleted(item)
+                                            } label: {
+                                                Label("Delete", systemImage: "trash")
+                                            }
+                                        }
                                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                             Button {
                                                 toBuyStore.add(ToBuyItem(name: item.name))
@@ -254,7 +276,7 @@ struct ItemRow: View {
 
 #Preview {
     NavigationView {
-        CurrentFoodListView(items: .constant(sampleItems), onItemSaved: { _ in })
+        CurrentFoodListView(items: .constant(sampleItems), onItemSaved: { _ in }, onItemDeleted: { _ in })
     }
     .environment(ToBuyStore())
     .environment(FoodNameStore())

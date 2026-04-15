@@ -172,7 +172,6 @@ struct BarcodeScannerView: View {
     // MARK: - Barcode Handling
 
     private func handleBarcode(_ code: String) {
-        //print("Scanned barcode: '\(code)'")   // ← add this line temporarily
         guard scannedCode == nil else { return }   // ignore duplicate detections
         scannedCode  = code
         prefillItem  = makeDraftItem(from: code)

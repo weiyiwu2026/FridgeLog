@@ -64,7 +64,7 @@ struct ManualEntryView: View {
             Section(header: Text("Item Details")) {
                 TextField("Item name (e.g. Milk)", text: $name)
                     .autocorrectionDisabled()
-                    .onChange(of: name) { _ in
+                    .onChange(of: name) {
                         let trimmed = name.trimmingCharacters(in: .whitespaces)
                         if !trimmed.isEmpty { showNameError = false }
 
@@ -121,7 +121,7 @@ struct ManualEntryView: View {
                     }
                     ForEach(itemTypes, id: \.self) { Text($0).tag($0) }
                 }
-                .onChange(of: itemType) { _ in
+                .onChange(of: itemType) {
                     showItemTypeError = false
                 }
 
@@ -154,7 +154,7 @@ struct ManualEntryView: View {
             //   shelfLifeDays  = days from purchaseDate to expirationDate
             Section(header: Text("Dates")) {
                 DatePicker("Purchase Date", selection: $purchaseDate, displayedComponents: .date)
-                    .onChange(of: purchaseDate) { _ in
+                    .onChange(of: purchaseDate) {
                         expirationDate = Calendar.current.date(byAdding: .day, value: shelfLifeDays, to: purchaseDate) ?? purchaseDate
                     }
 
@@ -162,13 +162,13 @@ struct ManualEntryView: View {
                     "Shelf Life: \(shelfLifeDays) day\(shelfLifeDays == 1 ? "" : "s")",
                     value: $shelfLifeDays, in: 1...365
                 )
-                .onChange(of: shelfLifeDays) { _ in
+                .onChange(of: shelfLifeDays) {
                     expirationDate = Calendar.current.date(byAdding: .day, value: shelfLifeDays, to: purchaseDate) ?? purchaseDate
                 }
 
                 DatePicker("Expiration Date", selection: $expirationDate,
                            in: purchaseDate..., displayedComponents: .date)
-                    .onChange(of: expirationDate) { _ in
+                    .onChange(of: expirationDate) {
                         let days = Calendar.current.dateComponents([.day], from: purchaseDate, to: expirationDate).day ?? 1
                         shelfLifeDays = max(1, days)
                     }

@@ -26,7 +26,7 @@ struct HomeView: View {
                     ) {
                         // Card 1 – Current Food List (navigates to real inventory)
                         NavigationLink(destination:
-                            CurrentFoodListView(items: $store.items, onItemSaved: saveItem)
+                            CurrentFoodListView(items: $store.items, onItemSaved: saveItem, onItemDeleted: deleteItem)
                         ) {
                             DashboardCard(
                                 title: "Current Food List",
@@ -69,7 +69,10 @@ struct HomeView: View {
                             DashboardCard(
                                 title: "What to Eat Today",
                                 icon: "fork.knife",
-                                badge: "\(generateIdeas(from: foodItemStore.items).count) idea\(generateIdeas(from: foodItemStore.items).count == 1 ? "" : "s")"
+                                badge: {
+                                        let n = generateIdeas(from: foodItemStore.items).count
+                                        return "\(n) idea\(n == 1 ? "" : "s")"
+                                    }()
                             )
                         }
                         .buttonStyle(.plain)
@@ -98,7 +101,7 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Save Logic (shared by dashboard Add Item and FoodListView)
+    // MARK: - Save / Delete Logic (shared by dashboard Add Item and FoodListView)
 
     func saveItem(_ newItem: FoodItem) {
         foodNameStore.add(
@@ -108,6 +111,10 @@ struct HomeView: View {
             shelfLifeDays: newItem.estimatedShelfLifeDays
         )
         foodItemStore.add(newItem)
+    }
+
+    func deleteItem(_ item: FoodItem) {
+        foodItemStore.delete(item)
     }
 }
 

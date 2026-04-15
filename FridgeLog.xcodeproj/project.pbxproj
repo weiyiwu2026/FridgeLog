@@ -10,9 +10,22 @@
 		5A77FA822F87FCFD00AEA942 /* FridgeLog.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FridgeLog.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		5A77FB032F8F35C000AEA942 /* Exceptions for "FridgeLog" folder in "FridgeLog" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 5A77FA812F87FCFD00AEA942 /* FridgeLog */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		5A77FA842F87FCFD00AEA942 /* FridgeLog */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				5A77FB032F8F35C000AEA942 /* Exceptions for "FridgeLog" folder in "FridgeLog" target */,
+			);
 			path = FridgeLog;
 			sourceTree = "<group>";
 		};
@@ -254,7 +267,10 @@
 				DEVELOPMENT_TEAM = C7PSR3FGGZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FridgeLog/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "FridgeLog uses the camera to scan food barcodes";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FridgeLog uses the microphone for voice food entry.  ";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "FridgeLog uses speech recognition to transcribe spoken food items.    ";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -287,7 +303,10 @@
 				DEVELOPMENT_TEAM = C7PSR3FGGZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FridgeLog/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "FridgeLog uses the camera to scan food barcodes";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FridgeLog uses the microphone for voice food entry.  ";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "FridgeLog uses speech recognition to transcribe spoken food items.    ";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

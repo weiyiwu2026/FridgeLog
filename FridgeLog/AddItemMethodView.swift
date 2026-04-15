@@ -25,7 +25,7 @@ struct AddItemMethodView: View {
                     icon: "mic",
                     label: "Voice",
                     description: "Say what you bought out loud",
-                    destination: PlaceholderView(title: "Voice Entry")
+                    destination: VoiceEntryView(onItemSaved: onItemSaved)
                 )
                 AddMethodButton(
                     icon: "doc.text.viewfinder",

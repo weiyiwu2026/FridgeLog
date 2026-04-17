@@ -26,10 +26,10 @@ struct HomeView: View {
                     ) {
                         // Card 1 – Current Food List (navigates to real inventory)
                         NavigationLink(destination:
-                            CurrentFoodListView(items: $store.items, onItemSaved: saveItem, onItemDeleted: deleteItem)
+                            CurrentFoodListView(items: $store.items, onItemSaved: saveItem)
                         ) {
                             DashboardCard(
-                                title: "Current Food List",
+                                title: "My Food",
                                 icon: "refrigerator",
                                 badge: "\(foodItemStore.items.count) item\(foodItemStore.items.count == 1 ? "" : "s")"
                             )
@@ -53,7 +53,7 @@ struct HomeView: View {
                         // Card 3 – To Buy List
                         NavigationLink(destination: ToBuyListView()) {
                             DashboardCard(
-                                title: "To Buy List",
+                                title: "Shopping List",
                                 icon: "cart",
                                 badge: toBuyStore.pendingCount > 0
                                     ? "\(toBuyStore.pendingCount) item\(toBuyStore.pendingCount == 1 ? "" : "s")"
@@ -67,7 +67,7 @@ struct HomeView: View {
                             FoodIdeasView(items: foodItemStore.items)
                         ) {
                             DashboardCard(
-                                title: "What to Eat Today",
+                                title: "Meal Ideas",
                                 icon: "fork.knife",
                                 badge: {
                                         let n = generateIdeas(from: foodItemStore.items).count
@@ -91,7 +91,7 @@ struct HomeView: View {
                 }
                 .padding()
             }
-            .navigationTitle("FridgeLog")
+            .navigationTitle("FoodLog")
             .sheet(isPresented: $showAddItem) {
                 AddItemMethodView(onItemSaved: { newItem in
                     saveItem(newItem)
@@ -113,9 +113,6 @@ struct HomeView: View {
         foodItemStore.add(newItem)
     }
 
-    func deleteItem(_ item: FoodItem) {
-        foodItemStore.delete(item)
-    }
 }
 
 // MARK: - Dashboard Card

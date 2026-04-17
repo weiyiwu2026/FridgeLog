@@ -15,6 +15,7 @@ struct ManualEntryView: View {
     @State private var purchaseDate       = Date()
     @State private var shelfLifeDays      = 7
     @State private var expirationDate     = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+    @State private var purchaseLocation   = ""
 
     @State private var showNameError      = false
     @State private var showItemTypeError  = false
@@ -26,10 +27,15 @@ struct ManualEntryView: View {
         expirationDate: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
     )
 
+    // When true, a Cancel button is shown in the nav bar (used when the form
+    // is presented as a sheet rather than pushed onto a navigation stack).
+    var showCancelButton: Bool = false
+
     // Designated init used by barcode scanner to pre-fill the form.
     // All parameters have defaults so existing call sites are unchanged.
-    init(onSave: @escaping (FoodItem) -> Void, prefill: FoodItem? = nil) {
+    init(onSave: @escaping (FoodItem) -> Void, prefill: FoodItem? = nil, showCancelButton: Bool = false) {
         self.onSave = onSave
+        self.showCancelButton = showCancelButton
         if let p = prefill {
             _name           = State(initialValue: p.name)
             _amountType     = State(initialValue: p.amountType)
@@ -37,8 +43,9 @@ struct ManualEntryView: View {
             _storagePlace   = State(initialValue: p.storagePlace)
             _itemType       = State(initialValue: p.itemType)
             _purchaseDate   = State(initialValue: p.purchaseDate)
-            _shelfLifeDays  = State(initialValue: p.estimatedShelfLifeDays)
-            _expirationDate = State(initialValue: p.expirationDate)
+            _shelfLifeDays      = State(initialValue: p.estimatedShelfLifeDays)
+            _expirationDate     = State(initialValue: p.expirationDate)
+            _purchaseLocation   = State(initialValue: p.purchaseLocation)
         }
     }
 
@@ -55,6 +62,13 @@ struct ManualEntryView: View {
 
     private var showNewItemHint: Bool {
         !trimmedName.isEmpty && !isKnownItem && foodNameStore.suggestions(for: trimmedName).isEmpty
+    }
+
+    private var locationSuggestions: [String] {
+        guard !purchaseLocation.isEmpty else { return [] }
+        return knownStores.filter {
+            $0.localizedCaseInsensitiveContains(purchaseLocation)
+        }
     }
 
     var body: some View {
@@ -145,7 +159,28 @@ struct ManualEntryView: View {
                 }
                 .pickerStyle(.segmented)
 
-                Stepper("\(amountType.rawValue): \(amountValue)", value: $amountValue, in: 1...99)
+                HStack {
+                    Text(amountType.rawValue)
+                    Spacer()
+                    TextField("1", value: $amountValue, format: .number)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                }
+            }
+
+            // ── Purchase Location ─────────────────────────────
+            Section(header: Text("Purchase Location")) {
+                TextField("Store name (optional)", text: $purchaseLocation)
+                    .autocorrectionDisabled()
+
+                ForEach(locationSuggestions, id: \.self) { store in
+                    Button(action: { purchaseLocation = store }) {
+                        Label(store, systemImage: "storefront")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                    }
+                }
             }
 
             // ── Dates ─────────────────────────────────────────
@@ -158,10 +193,14 @@ struct ManualEntryView: View {
                         expirationDate = Calendar.current.date(byAdding: .day, value: shelfLifeDays, to: purchaseDate) ?? purchaseDate
                     }
 
-                Stepper(
-                    "Shelf Life: \(shelfLifeDays) day\(shelfLifeDays == 1 ? "" : "s")",
-                    value: $shelfLifeDays, in: 1...365
-                )
+                HStack {
+                    Text("Shelf Life (days)")
+                    Spacer()
+                    TextField("7", value: $shelfLifeDays, format: .number)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                }
                 .onChange(of: shelfLifeDays) {
                     expirationDate = Calendar.current.date(byAdding: .day, value: shelfLifeDays, to: purchaseDate) ?? purchaseDate
                 }
@@ -185,6 +224,11 @@ struct ManualEntryView: View {
         .navigationTitle("Manual Entry")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            if showCancelButton {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Next") { goToReview() }
                     .fontWeight(.semibold)
@@ -212,11 +256,29 @@ struct ManualEntryView: View {
             itemType: itemType,
             purchaseDate: purchaseDate,
             estimatedShelfLifeDays: shelfLifeDays,
-            expirationDate: expirationDate
+            expirationDate: expirationDate,
+            purchaseLocation: purchaseLocation.trimmingCharacters(in: .whitespaces)
         )
         showReview = true
     }
 }
+
+// MARK: - Known Stores for Purchase Location autofill
+
+private let knownStores: [String] = [
+    "Walmart", "Kroger", "Costco", "Albertsons", "Ahold Delhaize",
+    "Publix", "Aldi", "Trader Joe's", "Target", "Sam's Club",
+    "BJ's Wholesale Club", "H-E-B", "Meijer", "Hy-Vee", "Wegmans",
+    "WinCo Foods", "Giant Eagle", "ShopRite", "Safeway", "Stop & Shop",
+    "Food Lion", "Hannaford", "Whole Foods Market", "Sprouts Farmers Market",
+    "Natural Grocers", "Fresh Market", "Grocery Outlet", "Save A Lot",
+    "Loblaw Companies", "Real Canadian Superstore", "No Frills",
+    "Shoppers Drug Mart", "Metro", "Sobeys", "Safeway Canada", "IGA",
+    "Food Basics", "Longo's", "Farm Boy", "Save-On-Foods", "FreshCo", "Co-op",
+    "H Mart", "99 Ranch Market", "Mitsuwa Marketplace", "Marukai",
+    "Tokyo Central", "Uwajimaya", "Zion Market", "Patel Brothers",
+    "Apna Bazaar", "T&T Supermarket",
+]
 
 #Preview {
     NavigationView {

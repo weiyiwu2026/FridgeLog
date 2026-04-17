@@ -347,7 +347,7 @@ struct FoodIdeasView: View {
             // Extra bottom padding so content is not hidden behind the action bar
             .padding(.bottom, 80)
         }
-        .navigationTitle("What to Eat Today")
+        .navigationTitle("Meal Ideas")
         .navigationBarTitleDisplayMode(.inline)
         // ── Filter menu ───────────────────────────────────────
         .toolbar {

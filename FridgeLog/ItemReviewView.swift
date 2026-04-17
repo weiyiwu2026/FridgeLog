@@ -20,6 +20,9 @@ struct ItemReviewView: View {
                 ReviewRow(label: "Name",         value: item.name)
                 ReviewRow(label: "Item Type",    value: item.itemType)
                 ReviewRow(label: "Storage",      value: item.storagePlace)
+                if !item.purchaseLocation.isEmpty {
+                    ReviewRow(label: "Bought At", value: item.purchaseLocation)
+                }
             }
 
             // ── Amount ────────────────────────────────────────

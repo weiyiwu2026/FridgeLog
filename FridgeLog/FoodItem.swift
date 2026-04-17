@@ -15,4 +15,5 @@ struct FoodItem: Identifiable, Codable {
     var purchaseDate: Date
     var estimatedShelfLifeDays: Int
     var expirationDate: Date        // always = purchaseDate + estimatedShelfLifeDays
+    var purchaseLocation: String    = ""   // optional — empty means not recorded
 }

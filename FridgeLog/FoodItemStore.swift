@@ -51,6 +51,44 @@ import Observation
         save()
     }
 
+    /// Increments the quantity of an existing item by 1.
+    func increment(_ item: FoodItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        items[index].amountValue += 1
+        save()
+    }
+
+    /// Decrements the quantity by 1. Deletes the item if quantity reaches 0.
+    func decrement(_ item: FoodItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        if items[index].amountValue <= 1 {
+            items.remove(at: index)
+        } else {
+            items[index].amountValue -= 1
+        }
+        save()
+    }
+
+    /// Subtracts `amount` from the item's quantity.
+    /// If the result is 0 or less, the item is removed entirely.
+    func consume(_ item: FoodItem, amount: Int) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        if amount >= items[index].amountValue {
+            items.remove(at: index)
+        } else {
+            items[index].amountValue -= amount
+        }
+        save()
+    }
+
+    /// Replaces an existing item (matched by the given ID) with a new version.
+    /// Used when saving edits made to an existing item.
+    func replace(id: UUID, with newItem: FoodItem) {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        items[index] = newItem
+        save()
+    }
+
     // MARK: - Persistence
 
     private func save() {

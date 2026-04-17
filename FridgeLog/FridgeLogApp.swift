@@ -9,10 +9,11 @@ import SwiftUI
 
 @main
 struct FridgeLogApp: App {
-    @State private var foodNameStore  = FoodNameStore()
-    @State private var toBuyStore     = ToBuyStore()
-    @State private var foodItemStore  = FoodItemStore()
-    @State private var barcodeStore   = BarcodeStore()
+    @State private var foodNameStore      = FoodNameStore()
+    @State private var toBuyStore         = ToBuyStore()
+    @State private var foodItemStore      = FoodItemStore()
+    @State private var barcodeStore       = BarcodeStore()
+    @State private var consumptionStore   = ConsumptionStore()
 
     var body: some Scene {
         WindowGroup {
@@ -21,6 +22,7 @@ struct FridgeLogApp: App {
                 .environment(toBuyStore)
                 .environment(foodItemStore)
                 .environment(barcodeStore)
+                .environment(consumptionStore)
         }
     }
 }

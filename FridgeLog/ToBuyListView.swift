@@ -1,10 +1,13 @@
 import SwiftUI
 
-// MARK: - To Buy List Screen
+// MARK: - Shopping List Screen
 
 struct ToBuyListView: View {
 
-    @Environment(ToBuyStore.self)    private var toBuyStore
+    @Environment(ToBuyStore.self)     private var toBuyStore
+    @Environment(FoodItemStore.self)  private var foodItemStore
+    @Environment(FoodNameStore.self)  private var foodNameStore
+
     @State private var showAddItem  = false
 
     // ── Selection mode state ─────────────────────────────────────
@@ -22,7 +25,7 @@ struct ToBuyListView: View {
                     Image(systemName: "cart")
                         .font(.system(size: 60))
                         .foregroundColor(.secondary)
-                    Text("Your to buy list is empty.")
+                    Text("Your shopping list is empty.")
                         .font(.title3)
                         .foregroundColor(.secondary)
                     Text("Tap + to add your first item.")
@@ -39,7 +42,11 @@ struct ToBuyListView: View {
                             ForEach(pendingItems) { item in
                                 selectableRow(for: item)
                                     .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                        Button { toBuyStore.toggleBought(item) } label: {
+                                        Button {
+                                            // Sync to My Food before marking bought
+                                            syncToMyFood(item)
+                                            toBuyStore.toggleBought(item)
+                                        } label: {
                                             Label("Bought", systemImage: "checkmark.circle.fill")
                                         }
                                         .tint(.green)
@@ -61,7 +68,9 @@ struct ToBuyListView: View {
                             ForEach(boughtItems) { item in
                                 selectableRow(for: item)
                                     .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                        Button { toBuyStore.toggleBought(item) } label: {
+                                        Button {
+                                            toBuyStore.toggleBought(item)
+                                        } label: {
                                             Label("Undo", systemImage: "arrow.uturn.left")
                                         }
                                         .tint(.orange)
@@ -88,7 +97,7 @@ struct ToBuyListView: View {
                 .listStyle(.insetGrouped)
             }
         }
-        .navigationTitle("To Buy List")
+        .navigationTitle("Shopping List")
         .navigationBarTitleDisplayMode(.inline)
         // ── Toolbar ───────────────────────────────────────────────
         .toolbar {
@@ -99,7 +108,17 @@ struct ToBuyListView: View {
                         Image(systemName: "plus").font(.title3)
                     }
                 }
-                // "Select" enters selection mode; "Done" exits it
+                // In selection mode: "Select All" / "Deselect All" toggle, then "Done"
+                if isSelecting {
+                    let allSelected = selectedIDs.count == toBuyStore.items.count
+                    Button(allSelected ? "Deselect All" : "Select All") {
+                        if allSelected {
+                            selectedIDs.removeAll()
+                        } else {
+                            selectedIDs = Set(toBuyStore.items.map { $0.id })
+                        }
+                    }
+                }
                 Button(isSelecting ? "Done" : "Select") {
                     if isSelecting { exitSelectionMode() } else { isSelecting = true }
                 }
@@ -145,8 +164,6 @@ struct ToBuyListView: View {
 
     // MARK: - Selectable Row
 
-    // Wraps ToBuyRow with a leading circle/checkmark in selection mode.
-    // Tapping the row toggles its selection when isSelecting is true.
     @ViewBuilder
     private func selectableRow(for item: ToBuyItem) -> some View {
         HStack(spacing: 12) {
@@ -158,11 +175,76 @@ struct ToBuyListView: View {
                     .foregroundColor(selectedIDs.contains(item.id) ? .accentColor : .secondary)
                     .animation(.easeInOut(duration: 0.15), value: selectedIDs.contains(item.id))
             }
-            ToBuyRow(item: item)
+            ToBuyRow(
+                item: item,
+                onIncrement: { toBuyStore.incrementQuantity(item) },
+                onDecrement: { toBuyStore.decrementOrDeleteQuantity(item) }
+            )
         }
         .contentShape(Rectangle())
         .onTapGesture {
             if isSelecting { toggleSelection(item) }
+        }
+    }
+
+    // MARK: - Sync to My Food
+    //
+    // Called when a Shopping List item is marked Bought.
+    // Looks for a matching My Food item purchased today (same name + store).
+    // If found: adds to its quantity.
+    // If not found: creates a new My Food item using food defaults.
+
+    private func syncToMyFood(_ toBuyItem: ToBuyItem) {
+        let cleanName  = toBuyItem.name.trimmingCharacters(in: .whitespaces)
+        let cleanStore = toBuyItem.store.trimmingCharacters(in: .whitespaces)
+        let qty        = toBuyItem.quantity
+        let today      = Date()
+
+        // Look up defaults for this food name
+        let itemType     = foodNameStore.defaultItemType(for: cleanName)     ?? "Other"
+        let storagePlace = foodNameStore.defaultStoragePlace(for: cleanName) ?? "Fridge"
+        let shelfDays    = foodNameStore.defaultShelfLifeDays(for: cleanName) ?? 7
+        let expiry       = Calendar.current.date(byAdding: .day, value: shelfDays, to: today) ?? today
+
+        // Find a My Food item with same name (+ store if available) purchased today
+        let match = foodItemStore.items.first { item in
+            let nameMatches = item.name.trimmingCharacters(in: .whitespaces)
+                .caseInsensitiveCompare(cleanName) == .orderedSame
+            let storeMatches = cleanStore.isEmpty ||
+                item.purchaseLocation.trimmingCharacters(in: .whitespaces)
+                    .caseInsensitiveCompare(cleanStore) == .orderedSame
+            let boughtToday = Calendar.current.isDate(item.purchaseDate, inSameDayAs: today)
+            return nameMatches && storeMatches && boughtToday
+        }
+
+        if let existing = match {
+            // Update existing item's quantity and refresh the purchase date
+            var updated              = existing
+            updated.amountValue     += qty
+            updated.purchaseDate     = today
+            updated.expirationDate   = expiry
+            foodItemStore.replace(id: existing.id, with: updated)
+        } else {
+            // Create a new My Food item
+            let newItem = FoodItem(
+                name:                   cleanName,
+                amountType:             .quantity,
+                amountValue:            qty,
+                storagePlace:           storagePlace,
+                itemType:               itemType,
+                purchaseDate:           today,
+                estimatedShelfLifeDays: shelfDays,
+                expirationDate:         expiry,
+                purchaseLocation:       cleanStore
+            )
+            // Learn this food name for future autocomplete
+            foodNameStore.add(
+                name:          cleanName,
+                itemType:      itemType,
+                storagePlace:  storagePlace,
+                shelfLifeDays: shelfDays
+            )
+            foodItemStore.add(newItem)
         }
     }
 
@@ -176,19 +258,16 @@ struct ToBuyListView: View {
         }
     }
 
-    // Mark all selected items as bought (silently skips items already bought).
-    // Exits selection mode after — the user has completed their action.
     private func markSelectedAsBought() {
         for id in selectedIDs {
             if let item = toBuyStore.items.first(where: { $0.id == id }), !item.isBought {
+                syncToMyFood(item)
                 toBuyStore.toggleBought(item)
             }
         }
         exitSelectionMode()
     }
 
-    // Delete all selected items.
-    // Exits selection mode after — the user has completed their action.
     private func removeSelected() {
         for id in selectedIDs {
             if let item = toBuyStore.items.first(where: { $0.id == id }) {
@@ -198,20 +277,29 @@ struct ToBuyListView: View {
         exitSelectionMode()
     }
 
-    // Clears selected IDs and leaves selection mode.
     private func exitSelectionMode() {
         isSelecting = false
         selectedIDs.removeAll()
     }
 }
 
-// MARK: - To Buy Row
+// MARK: - Shopping List Row
 
 struct ToBuyRow: View {
-    let item: ToBuyItem
+
+    let item:        ToBuyItem
+    let onIncrement: () -> Void
+    let onDecrement: () -> Void
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
+
+            // Cart icon
+            Image(systemName: "cart")
+                .foregroundColor(.accentColor)
+                .frame(width: 24)
+
+            // Name + optional store / note
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.name)
                     .font(.headline)
@@ -238,7 +326,28 @@ struct ToBuyRow: View {
 
             Spacer()
 
-            if item.isBought {
+            // Quantity controls — hidden when the item is already bought
+            if !item.isBought {
+                HStack(spacing: 6) {
+                    Button(action: onDecrement) {
+                        Image(systemName: "minus.circle")
+                            .foregroundColor(.secondary)
+                            .imageScale(.large)
+                    }
+                    .buttonStyle(.plain)
+
+                    Text("\(item.quantity)")
+                        .font(.subheadline.monospacedDigit())
+                        .frame(minWidth: 24, alignment: .center)
+
+                    Button(action: onIncrement) {
+                        Image(systemName: "plus.circle")
+                            .foregroundColor(.accentColor)
+                            .imageScale(.large)
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
                     .imageScale(.large)
@@ -344,4 +453,5 @@ struct AddToBuyItemView: View {
     }
     .environment(ToBuyStore())
     .environment(FoodNameStore())
+    .environment(FoodItemStore())
 }

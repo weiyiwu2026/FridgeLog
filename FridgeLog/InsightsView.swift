@@ -4,8 +4,9 @@ import SwiftUI
 
 struct InsightsView: View {
 
-    @Environment(FoodItemStore.self) private var foodItemStore
-    @Environment(ToBuyStore.self)    private var toBuyStore
+    @Environment(FoodItemStore.self)    private var foodItemStore
+    @Environment(ToBuyStore.self)       private var toBuyStore
+    @Environment(ConsumptionStore.self) private var consumptionStore
 
     // ── Computed summaries ────────────────────────────────────
 
@@ -25,6 +26,9 @@ struct InsightsView: View {
     private var ideasCount: Int {
         generateIdeas(from: foodItemStore.items).count
     }
+
+    private var recentRecords: [ConsumptionRecord] { consumptionStore.recent(days: 30) }
+    private var consumedThisMonth: Int { recentRecords.reduce(0) { $0 + $1.amountConsumed } }
 
     // ── View ──────────────────────────────────────────────────
 
@@ -87,6 +91,29 @@ struct InsightsView: View {
                     )
                 }
 
+                // ── Consumption ───────────────────────────────
+                Section("Consumption (Last 30 Days)") {
+                    InsightRow(
+                        label: "Items Consumed",
+                        value: recentRecords.count,
+                        icon:  "fork.knife",
+                        color: .orange,
+                        note:  recentRecords.isEmpty ? "None yet" : nil
+                    )
+                    InsightRow(
+                        label: "Total Amount",
+                        value: consumedThisMonth,
+                        icon:  "chart.bar",
+                        color: .orange,
+                        note:  consumedThisMonth == 0 ? "None yet" : nil
+                    )
+                    if !recentRecords.isEmpty {
+                        ForEach(recentRecords.prefix(5)) { record in
+                            ConsumptionRow(record: record)
+                        }
+                    }
+                }
+
                 // ── Ideas ─────────────────────────────────────
                 Section("Food Ideas") {
                     InsightRow(
@@ -138,8 +165,44 @@ struct InsightRow: View {
     }
 }
 
+// MARK: - Consumption Row
+
+struct ConsumptionRow: View {
+
+    let record: ConsumptionRecord
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .none
+        return f
+    }()
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "fork.knife.circle")
+                .foregroundColor(.orange)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(record.foodName)
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+                Text(Self.dateFormatter.string(from: record.dateConsumed))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Text("×\(record.amountConsumed)")
+                .font(.subheadline.monospacedDigit())
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 2)
+    }
+}
+
 #Preview {
     InsightsView()
         .environment(FoodItemStore())
         .environment(ToBuyStore())
+        .environment(ConsumptionStore())
 }

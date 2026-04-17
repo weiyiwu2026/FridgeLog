@@ -5,15 +5,24 @@ import SwiftUI
 struct CurrentFoodListView: View {
 
     @Binding var items: [FoodItem]
-    let onItemSaved:    (FoodItem) -> Void
-    let onItemDeleted:  (FoodItem) -> Void
+    let onItemSaved: (FoodItem) -> Void
 
-    @Environment(ToBuyStore.self) private var toBuyStore
+    @Environment(ToBuyStore.self)        private var toBuyStore
+    @Environment(FoodItemStore.self)     private var foodItemStore
+    @Environment(ConsumptionStore.self)  private var consumptionStore
 
     @State private var showAddItem     = false
     @State private var fridgeExpanded  = true
     @State private var freezerExpanded = true
     @State private var pantryExpanded  = true
+
+    // ── Edit / Consumed sheet state ───────────────────────────
+    @State private var editingItem:    FoodItem? = nil
+    @State private var consumingItem:  FoodItem? = nil
+
+    // ── Swipe action debounce ─────────────────────────────────
+    // Prevents the double-fire bug in SwiftUI swipeActions inside DisclosureGroup.
+    @State private var lastToListID: UUID? = nil
 
     // ── Search & Filter state ─────────────────────────────────
     @State private var searchText:            String  = ""
@@ -75,7 +84,7 @@ struct CurrentFoodListView: View {
                         .foregroundColor(.secondary)
                     Text("Try a different search or filter.")
                         .foregroundColor(.secondary)
-                    Button("Clear Search & Filters") { clearAll() }
+                    Button("Clear Search & Filters") { clearFilters() }
                         .padding(.top, 4)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -88,20 +97,10 @@ struct CurrentFoodListView: View {
                             DisclosureGroup(isExpanded: $fridgeExpanded) {
                                 ForEach(fridgeItems) { item in
                                     ItemRow(item: item)
-                                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                            Button(role: .destructive) {
-                                                onItemDeleted(item)
-                                            } label: {
-                                                Label("Delete", systemImage: "trash")
-                                            }
-                                        }
                                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                            Button {
-                                                toBuyStore.add(ToBuyItem(name: item.name))
-                                            } label: {
-                                                Label("Buy List", systemImage: "cart.badge.plus")
-                                            }
-                                            .tint(.blue)
+                                            consumedButton(for: item)
+                                            editButton(for: item)
+                                            toListButton(for: item)
                                         }
                                 }
                             } label: {
@@ -117,20 +116,10 @@ struct CurrentFoodListView: View {
                             DisclosureGroup(isExpanded: $freezerExpanded) {
                                 ForEach(freezerItems) { item in
                                     ItemRow(item: item)
-                                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                            Button(role: .destructive) {
-                                                onItemDeleted(item)
-                                            } label: {
-                                                Label("Delete", systemImage: "trash")
-                                            }
-                                        }
                                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                            Button {
-                                                toBuyStore.add(ToBuyItem(name: item.name))
-                                            } label: {
-                                                Label("Buy List", systemImage: "cart.badge.plus")
-                                            }
-                                            .tint(.blue)
+                                            consumedButton(for: item)
+                                            editButton(for: item)
+                                            toListButton(for: item)
                                         }
                                 }
                             } label: {
@@ -146,20 +135,10 @@ struct CurrentFoodListView: View {
                             DisclosureGroup(isExpanded: $pantryExpanded) {
                                 ForEach(pantryItems) { item in
                                     ItemRow(item: item)
-                                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                            Button(role: .destructive) {
-                                                onItemDeleted(item)
-                                            } label: {
-                                                Label("Delete", systemImage: "trash")
-                                            }
-                                        }
                                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                            Button {
-                                                toBuyStore.add(ToBuyItem(name: item.name))
-                                            } label: {
-                                                Label("Buy List", systemImage: "cart.badge.plus")
-                                            }
-                                            .tint(.blue)
+                                            consumedButton(for: item)
+                                            editButton(for: item)
+                                            toListButton(for: item)
                                         }
                                 }
                             } label: {
@@ -173,7 +152,7 @@ struct CurrentFoodListView: View {
                 .listStyle(.insetGrouped)
             }
         }
-        .navigationTitle("Current Food List")
+        .navigationTitle("My Food")
         .navigationBarTitleDisplayMode(.inline)
         // ── Search bar ────────────────────────────────────────
         .searchable(text: $searchText, prompt: "Search items")
@@ -223,17 +202,118 @@ struct CurrentFoodListView: View {
                 }
             }
         }
+        // ── Add new item sheet ────────────────────────────────
         .sheet(isPresented: $showAddItem) {
             AddItemMethodView(onItemSaved: { newItem in
                 onItemSaved(newItem)
                 showAddItem = false
             })
         }
+        // ── Consumed sheet ────────────────────────────────────
+        .sheet(item: $consumingItem) { item in
+            ConsumedSheetView(item: item) { amount in
+                consumptionStore.add(ConsumptionRecord(
+                    foodName:         item.name,
+                    itemType:         item.itemType,
+                    storagePlace:     item.storagePlace,
+                    purchaseLocation: item.purchaseLocation,
+                    amountConsumed:   min(amount, item.amountValue),
+                    dateConsumed:     Date()
+                ))
+                foodItemStore.consume(item, amount: amount)
+                consumingItem = nil
+            } onCancel: {
+                consumingItem = nil
+            }
+        }
+        // ── Edit existing item sheet ──────────────────────────
+        .sheet(item: $editingItem) { originalItem in
+            NavigationView {
+                ManualEntryView(
+                    onSave: { updatedItem in
+                        foodItemStore.replace(id: originalItem.id, with: updatedItem)
+                        editingItem = nil
+                    },
+                    prefill: originalItem,
+                    showCancelButton: true
+                )
+            }
+        }
+    }
+
+    // MARK: - Swipe Action Buttons
+
+    @ViewBuilder
+    private func toListButton(for item: FoodItem) -> some View {
+        Button {
+            // Guard against the SwiftUI double-fire bug in DisclosureGroup + swipeActions.
+            // If the same item's button fires again before the user starts a new gesture,
+            // ignore the second call.
+            guard lastToListID != item.id else { return }
+            lastToListID = item.id
+            toBuyStore.addFromFood(name: item.name, store: item.purchaseLocation, quantity: item.amountValue)
+            // Clear the guard after a short delay so future intentional taps work normally.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                if lastToListID == item.id { lastToListID = nil }
+            }
+        } label: {
+            Label("To List", systemImage: "cart.badge.plus")
+        }
+        .tint(.blue)
+    }
+
+    @ViewBuilder
+    private func consumedButton(for item: FoodItem) -> some View {
+        Button {
+            consumingItem = item
+        } label: {
+            Label("Consumed", systemImage: "fork.knife")
+        }
+        .tint(.green)
+    }
+
+    @ViewBuilder
+    private func incrementButton(for item: FoodItem) -> some View {
+        Button {
+            foodItemStore.increment(item)
+        } label: {
+            Label("+", systemImage: "plus")
+        }
+        .tint(.green)
+    }
+
+    @ViewBuilder
+    private func decrementButton(for item: FoodItem) -> some View {
+        Button {
+            foodItemStore.decrement(item)
+        } label: {
+            Label("-", systemImage: "minus")
+        }
+        .tint(.orange)
+    }
+
+    @ViewBuilder
+    private func editButton(for item: FoodItem) -> some View {
+        Button {
+            editingItem = item
+        } label: {
+            Label("Edit", systemImage: "pencil")
+        }
+        .tint(.orange)
+    }
+
+    @ViewBuilder
+    private func deleteButton(for item: FoodItem) -> some View {
+        Button(role: .destructive) {
+            foodItemStore.delete(item)
+        } label: {
+            Label("Delete", systemImage: "trash")
+        }
     }
 
     // MARK: - Helpers
 
-    private func clearAll() {
+    private func clearFilters() {
         searchText           = ""
         selectedStoragePlace = nil
         selectedItemType     = nil
@@ -263,8 +343,6 @@ struct ItemRow: View {
             HStack(spacing: 8) {
                 Text(item.amountType == .portions ? "Prt: \(item.amountValue)" : "Qty: \(item.amountValue)")
                 Text("·")
-                Text(item.itemType)
-                Text("·")
                 Text(expirationText)
             }
             .font(.subheadline)
@@ -274,10 +352,74 @@ struct ItemRow: View {
     }
 }
 
+// MARK: - Consumed Sheet
+
+struct ConsumedSheetView: View {
+
+    let item:     FoodItem
+    let onSave:   (Int) -> Void
+    let onCancel: () -> Void
+
+    @State private var inputText: String = "1"
+
+    // Parsed value from the text field; falls back to 1 if invalid.
+    private var consumedAmount: Int {
+        max(1, Int(inputText.trimmingCharacters(in: .whitespaces)) ?? 1)
+    }
+
+    var body: some View {
+        NavigationView {
+            Form {
+                // ── Item summary ──────────────────────────────
+                Section {
+                    LabeledContent("Item",        value: item.name)
+                    LabeledContent("Current Qty", value: "\(item.amountValue)")
+                }
+
+                // ── Amount input ──────────────────────────────
+                Section(header: Text("How much did you consume?")) {
+                    HStack {
+                        Text("Amount")
+                        Spacer()
+                        TextField("0", text: $inputText)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 80)
+                    }
+                }
+
+                // ── Quick action ──────────────────────────────
+                Section {
+                    Button {
+                        onSave(item.amountValue)
+                    } label: {
+                        Label("Consumed All (\(item.amountValue))", systemImage: "checkmark.circle.fill")
+                            .foregroundColor(.orange)
+                    }
+                }
+            }
+            .navigationTitle("Consumed")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { onCancel() }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") { onSave(consumedAmount) }
+                        .fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+}
+
 #Preview {
     NavigationView {
-        CurrentFoodListView(items: .constant(sampleItems), onItemSaved: { _ in }, onItemDeleted: { _ in })
+        CurrentFoodListView(items: .constant(sampleItems), onItemSaved: { _ in })
     }
     .environment(ToBuyStore())
     .environment(FoodNameStore())
+    .environment(FoodItemStore())
+    .environment(ConsumptionStore())
 }

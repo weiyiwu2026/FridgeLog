@@ -65,7 +65,7 @@ struct SettingsView: View {
 
                 // ── About ─────────────────────────────────────
                 Section("About") {
-                    LabeledContent("App",     value: "FridgeLog")
+                    LabeledContent("App",     value: "FoodLog")
                     LabeledContent("Version", value: "1.0")
                 }
             }
@@ -118,7 +118,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Label("Notifications", systemImage: "bell.slash")
                     .foregroundColor(.primary)
-                Text("Notifications are blocked. Go to Settings → FridgeLog to allow them.")
+                Text("Notifications are blocked. Go to Settings → FoodLog to allow them.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Button("Open Settings") {

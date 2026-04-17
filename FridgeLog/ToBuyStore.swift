@@ -29,6 +29,55 @@ class ToBuyStore {
         save()
     }
 
+    /// Smart add from the My Food page.
+    ///
+    /// Matching rules (only among non-bought items):
+    /// - If `store` is non-empty → match by name AND store (case-insensitive)
+    /// - If `store` is empty    → match by name only
+    ///
+    /// If a match exists: increment its quantity by 1.
+    /// If no match: create a new item with the given name and store.
+    func addFromFood(name: String, store: String, quantity: Int) {
+        let cleanName  = name.trimmingCharacters(in: .whitespaces)
+        let cleanStore = store.trimmingCharacters(in: .whitespaces)
+        let hasStore   = !cleanStore.isEmpty
+        let qty        = max(1, quantity)
+
+        if let index = items.firstIndex(where: { item in
+            guard !item.isBought else { return false }
+            let nameMatches = item.name.trimmingCharacters(in: .whitespaces)
+                .caseInsensitiveCompare(cleanName) == .orderedSame
+            if hasStore {
+                let storeMatches = item.store.trimmingCharacters(in: .whitespaces)
+                    .caseInsensitiveCompare(cleanStore) == .orderedSame
+                return nameMatches && storeMatches
+            } else {
+                return nameMatches
+            }
+        }) {
+            items[index].quantity += qty
+        } else {
+            items.append(ToBuyItem(name: cleanName, store: cleanStore, quantity: qty))
+        }
+        save()
+    }
+
+    func incrementQuantity(_ item: ToBuyItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        items[index].quantity += 1
+        save()
+    }
+
+    func decrementOrDeleteQuantity(_ item: ToBuyItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        if items[index].quantity <= 1 {
+            items.remove(at: index)
+        } else {
+            items[index].quantity -= 1
+        }
+        save()
+    }
+
     func delete(item: ToBuyItem) {
         items.removeAll { $0.id == item.id }
         save()

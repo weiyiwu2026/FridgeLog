@@ -265,7 +265,7 @@ struct ManualEntryView: View {
 
 // MARK: - Known Stores for Purchase Location autofill
 
-private let knownStores: [String] = [
+let knownStores: [String] = [
     "Walmart", "Kroger", "Costco", "Albertsons", "Ahold Delhaize",
     "Publix", "Aldi", "Trader Joe's", "Target", "Sam's Club",
     "BJ's Wholesale Club", "H-E-B", "Meijer", "Hy-Vee", "Wegmans",

@@ -15,7 +15,12 @@ struct ToBuyListView: View {
     @State private var selectedIDs: Set<UUID> = []
 
     private var pendingItems: [ToBuyItem] { toBuyStore.items.filter { !$0.isBought } }
-    private var boughtItems:  [ToBuyItem] { toBuyStore.items.filter {  $0.isBought } }
+    private var boughtItems:  [ToBuyItem] {
+        toBuyStore.items.filter {
+            $0.isBought &&
+            $0.purchaseDate.map { Calendar.current.isDateInToday($0) } == true
+        }
+    }
 
     var body: some View {
         Group {
@@ -370,6 +375,13 @@ struct AddToBuyItemView: View {
     @State private var note  = ""
     @State private var showNameError = false
 
+    private var storeSuggestions: [String] {
+        guard !store.isEmpty else { return [] }
+        return knownStores.filter {
+            $0.localizedCaseInsensitiveContains(store)
+        }
+    }
+
     private var suggestions: [String] {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return [] }
@@ -415,6 +427,16 @@ struct AddToBuyItemView: View {
 
                 Section(header: Text("Optional Details")) {
                     TextField("Store (e.g. Costco)", text: $store)
+                        .autocorrectionDisabled()
+
+                    ForEach(storeSuggestions, id: \.self) { suggestion in
+                        Button(action: { store = suggestion }) {
+                            Label(suggestion, systemImage: "storefront")
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+                        }
+                    }
+
                     TextField("Note or quantity (e.g. 2 packs)", text: $note)
                 }
             }

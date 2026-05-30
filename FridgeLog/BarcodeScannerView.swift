@@ -20,6 +20,7 @@ struct BarcodeScannerView: View {
     @State private var cameraSessionID   = UUID()
 
     @State private var cameraPermission: CameraPermission = .unknown
+    @State private var isLookingUp: Bool = false
 
     private enum CameraPermission {
         case unknown, granted, denied, unavailable
@@ -75,6 +76,19 @@ struct BarcodeScannerView: View {
                         .cornerRadius(14)
                 }
                 .padding()
+                .opacity(isLookingUp ? 0 : 1)
+            }
+            // ── Loading overlay while Open Food Facts is fetching ──
+            if isLookingUp {
+                Color.black.opacity(0.45).ignoresSafeArea()
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .tint(.white)
+                    Text("Looking up product…")
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                }
             }
         }
         .navigationTitle("Barcode Scanner")
@@ -172,10 +186,46 @@ struct BarcodeScannerView: View {
     // MARK: - Barcode Handling
 
     private func handleBarcode(_ code: String) {
-        guard scannedCode == nil else { return }   // ignore duplicate detections
-        scannedCode  = code
-        prefillItem  = makeDraftItem(from: code)
-        navigateToManual = true
+        guard scannedCode == nil else { return }
+        scannedCode = code
+
+        // Tiers 1 & 2 are instant — skip the network call if we already have a match
+        if barcodeStore.record(for: code) != nil || knownBarcodes[code] != nil {
+            prefillItem = makeDraftItem(from: code)
+            navigateToManual = true
+            return
+        }
+
+        // Tier 3: try Open Food Facts for unknown barcodes
+        isLookingUp = true
+        Task {
+            let product = await OpenFoodFactsService.lookup(barcode: code)
+            await MainActor.run {
+                isLookingUp = false
+                prefillItem = draftItem(fromOFF: product)
+                navigateToManual = true
+            }
+        }
+    }
+
+    // Builds a draft FoodItem from an Open Food Facts result.
+    // If product is nil (not found or network error), name is left blank so the
+    // user fills it in — same behavior as the current unknown-barcode path.
+    private func draftItem(fromOFF product: OFFProduct?) -> FoodItem {
+        let name  = product?.name ?? ""
+        let type  = foodNameStore.defaultItemType(for: name)       ?? "Other"
+        let place = foodNameStore.defaultStoragePlace(for: name)   ?? "Fridge"
+        let days  = foodNameStore.defaultShelfLifeDays(for: name)  ?? 7
+        return FoodItem(
+            name:                   name,
+            amountType:             .quantity,
+            amountValue:            1,
+            storagePlace:           place,
+            itemType:               type,
+            purchaseDate:           Date(),
+            estimatedShelfLifeDays: days,
+            expirationDate:         Calendar.current.date(byAdding: .day, value: days, to: Date()) ?? Date()
+        )
     }
 
     private func openManualEntry() {

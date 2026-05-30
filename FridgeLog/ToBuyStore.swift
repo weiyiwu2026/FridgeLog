@@ -86,6 +86,7 @@ class ToBuyStore {
     func toggleBought(_ item: ToBuyItem) {
         guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
         items[index].isBought.toggle()
+        items[index].purchaseDate = items[index].isBought ? Date() : nil
         save()
     }
 

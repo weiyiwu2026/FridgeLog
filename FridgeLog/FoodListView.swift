@@ -24,6 +24,9 @@ struct CurrentFoodListView: View {
     // Prevents the double-fire bug in SwiftUI swipeActions inside DisclosureGroup.
     @State private var lastToListID: UUID? = nil
 
+    // ── Double-tap hint ───────────────────────────────────────
+    @AppStorage("myFoodDoubleTapHintDismissed") private var hintDismissed = false
+
     // ── Search & Filter state ─────────────────────────────────
     @State private var searchText:            String  = ""
     @State private var selectedStoragePlace:  String? = nil   // nil = All
@@ -97,9 +100,9 @@ struct CurrentFoodListView: View {
                             DisclosureGroup(isExpanded: $fridgeExpanded) {
                                 ForEach(fridgeItems) { item in
                                     ItemRow(item: item)
+                                        .onTapGesture(count: 2) { openEdit(item) }
                                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                             consumedButton(for: item)
-                                            editButton(for: item)
                                             toListButton(for: item)
                                         }
                                 }
@@ -116,9 +119,9 @@ struct CurrentFoodListView: View {
                             DisclosureGroup(isExpanded: $freezerExpanded) {
                                 ForEach(freezerItems) { item in
                                     ItemRow(item: item)
+                                        .onTapGesture(count: 2) { openEdit(item) }
                                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                             consumedButton(for: item)
-                                            editButton(for: item)
                                             toListButton(for: item)
                                         }
                                 }
@@ -135,9 +138,9 @@ struct CurrentFoodListView: View {
                             DisclosureGroup(isExpanded: $pantryExpanded) {
                                 ForEach(pantryItems) { item in
                                     ItemRow(item: item)
+                                        .onTapGesture(count: 2) { openEdit(item) }
                                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                             consumedButton(for: item)
-                                            editButton(for: item)
                                             toListButton(for: item)
                                         }
                                 }
@@ -146,6 +149,16 @@ struct CurrentFoodListView: View {
                                     .font(.headline)
                                     .foregroundColor(.primary)
                             }
+                        }
+                    }
+
+                    // ── Double-tap hint (shown until first use) ───
+                    if !hintDismissed {
+                        Section {
+                            Label("Double-tap any item to edit it.", systemImage: "hand.tap")
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                                .listRowBackground(Color.clear)
                         }
                     }
                 }
@@ -293,16 +306,6 @@ struct CurrentFoodListView: View {
     }
 
     @ViewBuilder
-    private func editButton(for item: FoodItem) -> some View {
-        Button {
-            editingItem = item
-        } label: {
-            Label("Edit", systemImage: "pencil")
-        }
-        .tint(.orange)
-    }
-
-    @ViewBuilder
     private func deleteButton(for item: FoodItem) -> some View {
         Button(role: .destructive) {
             foodItemStore.delete(item)
@@ -312,6 +315,11 @@ struct CurrentFoodListView: View {
     }
 
     // MARK: - Helpers
+
+    private func openEdit(_ item: FoodItem) {
+        editingItem = item
+        hintDismissed = true
+    }
 
     private func clearFilters() {
         searchText           = ""

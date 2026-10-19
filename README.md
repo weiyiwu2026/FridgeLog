@@ -61,6 +61,15 @@ This feature explores the integration of speech recognition, natural language pr
 
 *Device requirements and configuration instructions will be updated as development progresses.*
 
+<p align="center">
+  <img src="screenshots/IMG_8928.png" width="220" alt="Home Screen">
+  <img src="screenshots/IMG_8926.png" width="220" alt="Add Food">
+  <img src="screenshots/IMG_8925.png" width="220" alt="Voice Entry">
+  <img src="screenshots/IMG_8924.png" width="220" alt="Add Food">
+  <img src="screenshots/IMG_8927.png" width="220" alt="Voice Entry">
+</p>
+
+
 ## Roadmap
 
 - [ ] Improve voice-to-structured-data accuracy

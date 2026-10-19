@@ -15,12 +15,17 @@ The app explores how AI-powered inputs can reduce the friction of manually maint
 
 ## Demo
 
-*Add screenshots or a short demo GIF here.*
+<p align="center">
+  <img src="screenshots/IMG_8924.PNG" width="220" alt="Main menu">
+  <img src="screenshots/IMG_8928.PNG" width="220" alt="Home Screen">
+  <img src="screenshots/IMG_8926.PNG" width="220" alt="Add Food">
+</p>
 
-Suggested screenshots:
-- Main inventory dashboard
-- Voice entry and AI-powered extraction
-- Add/edit food item interface
+<p align="center">
+  <img src="screenshots/IMG_8925.PNG" width="220" alt="Voice Entry">
+  <img src="screenshots/IMG_8927.PNG" width="220" alt="Voice Entry">
+  <img src="screenshots/IMG_8929.PNG" width="220" alt="Voice Entry">
+</p>
 
 ## Tech Stack
 
@@ -61,17 +66,6 @@ This feature explores the integration of speech recognition, natural language pr
 
 *Device requirements and configuration instructions will be updated as development progresses.*
 
-<p align="center">
-  <img src="screenshots/IMG_8924.PNG" width="220" alt="Main menu">
-  <img src="screenshots/IMG_8928.PNG" width="220" alt="Home Screen">
-  <img src="screenshots/IMG_8926.PNG" width="220" alt="Add Food">
-</p>
-
-<p align="center">
-  <img src="screenshots/IMG_8925.PNG" width="220" alt="Voice Entry">
-  <img src="screenshots/IMG_8927.PNG" width="220" alt="Voice Entry">
-  <img src="screenshots/IMG_8929.PNG" width="220" alt="Voice Entry">
-</p>
 ## Roadmap
 
 - [ ] Improve voice-to-structured-data accuracy

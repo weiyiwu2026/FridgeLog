@@ -33,7 +33,7 @@ The app explores how AI-powered inputs can reduce the friction of manually maint
 - **UI Framework:** SwiftUI
 - **Platform:** iOS
 - **Speech Recognition:** Apple Speech Framework
-- **AI:** Apple Foundation Models and Claude API (where implemented)
+- **AI:** Apple Foundation Models
 - **Development:** Xcode
 
 ## Technical Highlights
